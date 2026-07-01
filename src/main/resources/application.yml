@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: haeyaji-be
+  # 실제 키는 gitignore된 application-secret.yml 에서 로드(없으면 무시). 값은 아래 ${ENV:} 로도 주입 가능.
+  config:
+    import: optional:file:application-secret.yml
+
+server:
+  # sapari-be(기본 8080)와 충돌 방지. 필요 시 SERVER_PORT로 override.
+  port: ${SERVER_PORT:8090}
+  servlet:
+    context-path: /api
+
+# 외부 API 연동 설정
+haeyaji:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}
+  weather:
+    kma:
+      auth-key: ${KMA_AUTH_KEY:}
+      # 응답 캐시 TTL(분). 같은 좌표·발표시각 재호출 절감.
+      cache-ttl-minutes: 30
+      # 단기예보(동네예보): 격자(nx,ny) 기반, 오늘~+3일, 시간별.
+      base-url: https://apihub.kma.go.kr/api/typ02/openApi/VilageFcstInfoService_2.0
+      mid:
+        # 중기육상예보(getMidLandFcst): 지역코드 기반, +4~+10일 하늘상태·강수확률(JSON).
+        land-base-url: https://apihub.kma.go.kr/api/typ02/openApi/MidFcstInfoService
+        # 중기기온(fct_afs_wc.php): 지역코드 기반, 최저/최고기온(텍스트).
+        ta-base-url: https://apihub.kma.go.kr/api/typ01/url
+    # data.go.kr 공용 서비스키 (생활기상지수 UV + 에어코리아 미세먼지, 계정당 1키). 보강용.
+    datakr:
+      service-key: ${DATA_GO_KR_SERVICE_KEY:}
+    # 자외선지수(생활기상지수 getUVIdxV5 = 조회서비스 3.0): data.go.kr.
+    uv:
+      base-url: https://apis.data.go.kr/1360000/LivingWthrIdxServiceV5
+    # 미세먼지(에어코리아 getCtprvnRltmMesureDnsty): data.go.kr.
+    airquality:
+      base-url: https://apis.data.go.kr/B552584/ArpltnInforInqireSvc

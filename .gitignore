@@ -1,0 +1,35 @@
+HELP.md
+.gradle
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+# 루트 IDE 산출물만 무시 (application/port/out 같은 패키지가 걸리지 않도록 앵커링)
+/bin/
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+/out/
+
+### VS Code ###
+.vscode/
+
+### OS ###
+.DS_Store
+
+### 환경/비밀 ###
+.env
+application-local.yml
+application-secret.yml

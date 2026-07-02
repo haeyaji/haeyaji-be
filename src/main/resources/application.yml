@@ -36,3 +36,5 @@ haeyaji:
     # 미세먼지(에어코리아 getCtprvnRltmMesureDnsty): data.go.kr.
     airquality:
       base-url: https://apis.data.go.kr/B552584/ArpltnInforInqireSvc
+      # 측정소정보(getMsrstnList): 측정소 좌표 목록 → 최근접 측정소 매칭용.
+      station-base-url: https://apis.data.go.kr/B552584/MsrstnInfoInqireSvc

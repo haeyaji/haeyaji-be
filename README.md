@@ -61,7 +61,8 @@ GET /api/weather?lat={위도}&lng={경도}&date={yyyy-MM-dd}
 | **오늘 ~ +3일** | 단기예보 `getVilageFcst` (격자 5km) | 전 필드 + `hourly` 시간별 |
 | **+4 ~ +10일** | 중기예보 `getMidLandFcst`(하늘·강수) + `fct_afs_wc.php`(최저/최고) | `cond/temp/hi/lo/pop`. `feels/humidity/windMs`=**null**, `hourly`=**[]** |
 
-- `cond`: `sunny` | `cloudy` | `rainy` (단기 SKY/PTY, 중기 하늘상태 텍스트 → 3분류)
+- `cond`: `sunny` | `cloudy` | `rainy` | `snowy` (단기 SKY/PTY, 중기 하늘상태 텍스트 → 4분류)
+  - 눈(PTY 3·7) → `snowy`, 비/눈 혼재(PTY 2·6)는 기온 ≤1℃면 `snowy` 아니면 `rainy`
 - `uvIndex`: 기상청 생활기상지수(apihub getUVIdxV3) — 대상 날짜 피크값. 보강용이라 실패 시 `null`
 - `pm10`/`pm25`: 에어코리아(data.go.kr) 시도별 실시간 평균 — **오늘 조회만** 채움(실시간 관측). 키·실패 시 `null`
 - 위 둘은 **fail-soft**: 실패해도 해당 필드만 `null`, 날씨 본체는 `200` 유지
@@ -69,7 +70,7 @@ GET /api/weather?lat={위도}&lng={경도}&date={yyyy-MM-dd}
 
 ### be가 처리하는 것
 - 기상청 인증키 보관, CORS, **위경도 → 격자(nx,ny) 변환** 및 **→ 중기 지역코드 최근접 매핑**
-- 응답 캐싱(기본 30분), cond 3분류 매핑, 체감온도 파생, 발표시각 자동 계산(늦은 밤 이전 발표 폴백)
+- 응답 캐싱(기본 30분), cond 4분류 매핑, 체감온도 파생, 발표시각 자동 계산(늦은 밤 이전 발표 폴백)
 
 ### 키 2종
 

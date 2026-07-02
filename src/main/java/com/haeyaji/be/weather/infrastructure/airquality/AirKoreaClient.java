@@ -12,15 +12,16 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * 미세먼지 아웃바운드 어댑터 (에어코리아 시도별 실시간 getCtprvnRltmMesureDnsty, data.go.kr).
- * 해당 시도 측정소들의 유효 pm10/pm25 평균을 낸다(도시 단위 대표값).
+ * 미세먼지 아웃바운드 어댑터 (에어코리아 getCtprvnRltmMesureDnsty, data.go.kr).
  *
- * <p>data.go.kr는 일일 트래픽 제한이 작으므로(개발계정 수백 건 수준) <b>시도 단위로 캐싱</b>한다.
- * 측정값이 1시간 주기로 갱신되므로 TTL 60분 → 상위 호출은 최대 17개 시도 × 24회/일로 바운드.
+ * <p><b>전국 1콜 캐싱</b>: {@code sidoName=전국} 으로 전국 측정소(~670개)를 한 번에 받아
+ * 60분 캐시하고, 요청 좌표의 시도에 해당하는 측정소들만 걸러 평균 낸다.
+ * → 상위 호출은 지역·사용자 수와 무관하게 <b>최대 24건/일</b> (일일 제한 500건 대비 안전).
+ *
+ * <p>주의: 전국 조회 응답의 sidoName은 "전남광주"처럼 합쳐진 표기가 있어 contains 로 매칭한다.
  *
  * <p>보강용이므로 어떤 실패에도 예외를 던지지 않고 {@link AirQuality#EMPTY} 를 반환한다.
  * 에어코리아는 apihub가 아니라 data.go.kr 소속이라 별도 serviceKey를 쓴다.
@@ -29,18 +30,26 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class AirKoreaClient implements AirQualityProvider {
 
-    /** 에어코리아 실시간 측정은 매시 갱신 → 시도별 60분 캐시. */
+    /** 에어코리아 실시간 측정은 매시 갱신 → 전국 응답 60분 캐시. */
     private static final Duration CACHE_TTL = Duration.ofMinutes(60);
+    private static final String SIDO_ALL = "전국";
+    /** 전국 측정소 ~670개를 한 페이지로 수용. */
+    private static final int NUM_OF_ROWS = 1000;
 
     private final WebClient webClient;
     private final ObjectMapper objectMapper;
     private final String serviceKey;
-    private final Map<String, CacheEntry> cache = new ConcurrentHashMap<>();
+    /** 전국 응답 캐시 (측정소 목록 + 만료시각). */
+    private final AtomicReference<CacheEntry> cache = new AtomicReference<>();
 
     public AirKoreaClient(ObjectMapper objectMapper,
                           @Value("${haeyaji.weather.airquality.base-url}") String baseUrl,
                           @Value("${haeyaji.weather.datakr.service-key:}") String serviceKey) {
-        this.webClient = WebClient.builder().baseUrl(baseUrl).build();
+        this.webClient = WebClient.builder()
+                .baseUrl(baseUrl)
+                // 전국 응답(~350KB)이 기본 버퍼(256KB)를 넘으므로 상향
+                .codecs(c -> c.defaultCodecs().maxInMemorySize(2 * 1024 * 1024))
+                .build();
         this.objectMapper = objectMapper;
         this.serviceKey = serviceKey;
     }
@@ -50,30 +59,38 @@ public class AirKoreaClient implements AirQualityProvider {
         if (!StringUtils.hasText(serviceKey)) {
             return AirQuality.EMPTY;
         }
-        SidoRegion region = SidoRegion.nearest(lat, lng);
-
-        // 같은 시도는 좌표가 달라도 같은 값 → 시도 키로 캐싱해 일일 호출 제한을 지킨다.
-        CacheEntry cached = cache.get(region.sidoName());
-        if (cached != null && cached.expiresAt().isAfter(Instant.now())) {
-            return cached.value();
+        JsonNode stations = nationwideStations();
+        if (stations == null) {
+            return AirQuality.EMPTY;
         }
+        SidoRegion region = SidoRegion.nearest(lat, lng);
+        return new AirQuality(
+                average(stations, region.sidoName(), "pm10Value"),
+                average(stations, region.sidoName(), "pm25Value"));
+    }
 
-        AirQuality fetched = fetch(region, lat, lng);
-        if (fetched != AirQuality.EMPTY) {
-            cache.put(region.sidoName(), new CacheEntry(fetched, Instant.now().plus(CACHE_TTL)));
+    /** 전국 측정소 목록(캐시 우선). 실패 시 null. */
+    private JsonNode nationwideStations() {
+        CacheEntry cached = cache.get();
+        if (cached != null && cached.expiresAt().isAfter(Instant.now())) {
+            return cached.stations();
+        }
+        JsonNode fetched = fetchNationwide();
+        if (fetched != null) {
+            cache.set(new CacheEntry(fetched, Instant.now().plus(CACHE_TTL)));
         }
         return fetched;
     }
 
-    private AirQuality fetch(SidoRegion region, double lat, double lng) {
+    private JsonNode fetchNationwide() {
         try {
             String body = webClient.get()
                     .uri(uri -> uri.path("/getCtprvnRltmMesureDnsty")
                             .queryParam("serviceKey", serviceKey)
                             .queryParam("returnType", "json")
-                            .queryParam("numOfRows", 100)
+                            .queryParam("numOfRows", NUM_OF_ROWS)
                             .queryParam("pageNo", 1)
-                            .queryParam("sidoName", region.sidoName())
+                            .queryParam("sidoName", SIDO_ALL)
                             .queryParam("ver", "1.5")
                             .build())
                     .retrieve()
@@ -82,21 +99,21 @@ public class AirKoreaClient implements AirQualityProvider {
                     .block();
 
             JsonNode items = objectMapper.readTree(body).path("response").path("body").path("items");
-            return new AirQuality(average(items, "pm10Value"), average(items, "pm25Value"));
+            return items.isArray() ? items : null;
         } catch (Exception e) {
-            log.warn("air quality fetch failed (lat={}, lng={}): {}", lat, lng, e.toString());
-            return AirQuality.EMPTY;
+            log.warn("air quality nationwide fetch failed: {}", e.toString());
+            return null;
         }
     }
 
-    /** 측정소 목록에서 유효 수치의 평균(반올림). 유효값 없으면 null. */
-    private Integer average(JsonNode items, String field) {
-        if (!items.isArray()) {
-            return null;
-        }
+    /** 해당 시도 측정소들의 유효 수치 평균(반올림). 유효값 없으면 null. */
+    private Integer average(JsonNode stations, String sidoName, String field) {
         long sum = 0;
         int count = 0;
-        for (JsonNode station : items) {
+        for (JsonNode station : stations) {
+            if (!matchesSido(station.path("sidoName").asString(""), sidoName)) {
+                continue;
+            }
             JsonNode v = station.get(field);
             if (v == null || v.isNull()) {
                 continue;
@@ -115,6 +132,12 @@ public class AirKoreaClient implements AirQualityProvider {
         return count == 0 ? null : Math.round((float) sum / count);
     }
 
-    private record CacheEntry(AirQuality value, Instant expiresAt) {
+    /** 전국 응답은 "전남광주"처럼 합쳐진 시도명이 있어 부분일치로 매칭. */
+    private boolean matchesSido(String stationSido, String targetSido) {
+        return !stationSido.isEmpty()
+                && (stationSido.contains(targetSido) || targetSido.contains(stationSido));
+    }
+
+    private record CacheEntry(JsonNode stations, Instant expiresAt) {
     }
 }

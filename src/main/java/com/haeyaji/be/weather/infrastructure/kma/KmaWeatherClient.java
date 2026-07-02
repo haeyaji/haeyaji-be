@@ -155,7 +155,7 @@ public class KmaWeatherClient implements ShortTermWeatherProvider {
         int feels = FeelsLike.calculate(temp, humidity, windMs);
 
         return Weather.builder()
-                .cond(WeatherCondition.resolve(sky, pty))
+                .cond(WeatherCondition.resolve(sky, pty, temp))
                 .condKo(WeatherCondition.describeKo(sky, pty))
                 .temp(temp)
                 .hi(hi)

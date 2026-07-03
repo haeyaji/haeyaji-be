@@ -55,7 +55,10 @@ class WeatherServiceTest {
     }
 
     private WeatherService service() {
-        return new WeatherService(shortProvider(), midProvider(), uvProvider(), airProvider(), 30, fixedClock);
+        // 초단기(실황/예보)는 이 테스트 관심사가 아니므로 미제공(fail-soft 경로) 스텁
+        return new WeatherService(shortProvider(), midProvider(),
+                (lat, lng) -> null, (lat, lng) -> java.util.List.of(),
+                uvProvider(), airProvider(), 30, fixedClock);
     }
 
     @Test

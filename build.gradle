@@ -24,6 +24,9 @@ dependencies {
     // WebClient (기상청 등 외부 API 중계)
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
 
+    // 로컬 개발 편의: 클래스 변경 시 자동 재시작 (운영 빌드엔 미포함)
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
 

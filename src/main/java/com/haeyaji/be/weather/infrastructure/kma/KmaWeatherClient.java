@@ -38,7 +38,10 @@ public class KmaWeatherClient implements ShortTermWeatherProvider {
     // 단기예보 전체 항목(totalCount ~1016)을 한 페이지로 받도록 여유 있게.
     private static final int NUM_OF_ROWS = 1200;
     private static final int PREFERRED_HOUR_FUTURE = 1200;
+    /** 오늘 조회 시 시간별 칸 수(현재 시각부터 앞으로, 자정 넘김 포함). */
     private static final int MAX_HOURLY = 8;
+    /** 미래 날짜 조회 시 하루 전체(00~23시)를 담기 위한 상한. */
+    private static final int FULL_DAY_HOURLY = 24;
 
     private final WebClient webClient;
     private final String authKey;
@@ -167,7 +170,7 @@ public class KmaWeatherClient implements ShortTermWeatherProvider {
                 .uvIndex(null)
                 .pm10(null)
                 .pm25(null)
-                .hourly(buildHourly(byTime, repTime))
+                .hourly(buildHourly(items, date, repTime))
                 .build();
     }
 
@@ -188,20 +191,52 @@ public class KmaWeatherClient implements ShortTermWeatherProvider {
         return ceil != null ? ceil : byTime.firstKey();
     }
 
-    private List<HourlyWeather> buildHourly(TreeMap<Integer, Map<String, String>> byTime, int fromTime) {
+    /**
+     * 시간별 예보 구성. 대표시각과 분리해 케이스별로 다른 범위를 쓴다.
+     * <ul>
+     *   <li>오늘: 현재 시각(repTime)부터 앞으로 {@link #MAX_HOURLY}칸. 자정을 넘기면 <b>다음날 새벽까지</b> 이어붙임</li>
+     *   <li>미래: 그 날짜 00~23시 <b>하루 전체</b>(정오부터 시작하던 버그 제거)</li>
+     * </ul>
+     * fcstDate+fcstTime(12자리)을 long 키로 써서 날짜 경계를 넘어 시간순 정렬한다.
+     */
+    private List<HourlyWeather> buildHourly(List<Item> items, LocalDate date, int repTime) {
+        boolean today = date.isEqual(LocalDate.now());
+        String d0 = date.format(DATE);
+        String d1 = date.plusDays(1).format(DATE); // 오늘 조회 시 자정 넘김용
+
+        TreeMap<Long, Map<String, String>> bySlot = new TreeMap<>();
+        for (Item item : items) {
+            String fd = item.fcstDate();
+            boolean include = d0.equals(fd) || (today && d1.equals(fd));
+            if (!include) {
+                continue;
+            }
+            int time = parseIntSafe(item.fcstTime(), -1);
+            if (time < 0) {
+                continue;
+            }
+            long slot = Long.parseLong(fd) * 10000L + time; // 예: 202607041500
+            bySlot.computeIfAbsent(slot, k -> new java.util.HashMap<>())
+                    .put(item.category(), item.fcstValue());
+        }
+
+        long baseDay = Long.parseLong(d0) * 10000L;
+        long startKey = today ? baseDay + repTime : baseDay; // 오늘=지금부터, 미래=00시부터
+        int cap = today ? MAX_HOURLY : FULL_DAY_HOURLY;
+
         List<HourlyWeather> hourly = new ArrayList<>();
-        for (Map.Entry<Integer, Map<String, String>> e : byTime.tailMap(fromTime, true).entrySet()) {
+        for (Map.Entry<Long, Map<String, String>> e : bySlot.tailMap(startKey, true).entrySet()) {
             Map<String, String> v = e.getValue();
             if (v.get("TMP") == null) {
                 continue;
             }
-            int hh = e.getKey() / 100;
+            int hh = (int) ((e.getKey() % 10000) / 100);
             hourly.add(new HourlyWeather(
                     "%02d:00".formatted(hh),
                     roundSafeOr(v.get("TMP"), 0),
                     parseIntSafe(v.get("POP"), 0)
             ));
-            if (hourly.size() >= MAX_HOURLY) {
+            if (hourly.size() >= cap) {
                 break;
             }
         }

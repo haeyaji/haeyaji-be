@@ -19,6 +19,8 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 중기예보 아웃바운드 어댑터. 두 소스를 합쳐 하루 단위 {@link Weather} 로 매핑한다.
@@ -38,6 +40,10 @@ public class KmaMidTermWeatherClient implements MidTermWeatherProvider {
     private final WebClient taClient;
     private final ObjectMapper objectMapper;
     private final String authKey;
+    /** landRegId|tmFc → 육상예보 item. 중기예보는 하루 2회 발표라 발표시각 키로 재사용. */
+    private final Map<String, JsonNode> landCache = new ConcurrentHashMap<>();
+    /** taRegId|tmFc|ymd → 최저/최고기온. */
+    private final Map<String, MinMax> tempCache = new ConcurrentHashMap<>();
 
     public KmaMidTermWeatherClient(ObjectMapper objectMapper,
                                    @Value("${haeyaji.weather.kma.mid.land-base-url}") String landBaseUrl,
@@ -113,8 +119,22 @@ public class KmaMidTermWeatherClient implements MidTermWeatherProvider {
                 .build();
     }
 
-    /** 중기육상예보 item 노드. */
+    /** 중기육상예보 item 노드 (발표시각 캐시). */
     private JsonNode callLand(String regId, String tmFc) {
+        String key = regId + "|" + tmFc;
+        JsonNode cached = landCache.get(key);
+        if (cached != null) {
+            return cached;
+        }
+        JsonNode item = requestLand(regId, tmFc);
+        if (landCache.size() > 128) {
+            landCache.clear(); // 지난 발표시각 키 정리
+        }
+        landCache.put(key, item);
+        return item;
+    }
+
+    private JsonNode requestLand(String regId, String tmFc) {
         try {
             String body = landClient.get()
                     .uri(uri -> uri.path("/getMidLandFcst")
@@ -156,6 +176,22 @@ public class KmaMidTermWeatherClient implements MidTermWeatherProvider {
      */
     private MinMax callTemp(String regId, String tmFc, LocalDate date) {
         String targetYmd = date.format(YMD);
+        String key = regId + "|" + tmFc + "|" + targetYmd;
+        MinMax cached = tempCache.get(key);
+        if (cached != null) {
+            return cached;
+        }
+        MinMax result = requestTemp(regId, tmFc, targetYmd);
+        if (result != null) {
+            if (tempCache.size() > 256) {
+                tempCache.clear();
+            }
+            tempCache.put(key, result); // 결측은 캐시 안 함(다음에 재시도)
+        }
+        return result;
+    }
+
+    private MinMax requestTemp(String regId, String tmFc, String targetYmd) {
         try {
             String body = taClient.get()
                     .uri(uri -> uri.path("/fct_afs_wc.php")

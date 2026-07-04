@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 기상청 단기예보(getVilageFcst) 아웃바운드 어댑터.
@@ -45,6 +46,11 @@ public class KmaWeatherClient implements ShortTermWeatherProvider {
 
     private final WebClient webClient;
     private final String authKey;
+    /**
+     * nx:ny|발표시각 → 응답. 같은 격자·발표시각이면 응답이 동일(3시간 주기 발표)하므로,
+     * 상위 병합 캐시가 짧게(오늘 10분) 만료돼도 여기서 재사용해 실제 KMA 호출은 발표당 1회로 묶는다.
+     */
+    private final Map<String, KmaForecastResponse> responseCache = new ConcurrentHashMap<>();
 
     public KmaWeatherClient(WebClient.Builder webClientBuilder,
                             @Value("${haeyaji.weather.kma.base-url}") String baseUrl,
@@ -87,6 +93,22 @@ public class KmaWeatherClient implements ShortTermWeatherProvider {
     }
 
     private KmaForecastResponse callApi(GridConverter.Grid grid, KmaBaseTime.BaseTime base) {
+        String key = grid.nx() + ":" + grid.ny() + "|" + base.baseDate() + base.baseTime();
+        KmaForecastResponse cached = responseCache.get(key);
+        if (cached != null) {
+            return cached;
+        }
+        KmaForecastResponse response = requestApi(grid, base);
+        if (response != null && response.isSuccess()) {
+            if (responseCache.size() > 512) {
+                responseCache.clear(); // 지난 발표시각 키 정리
+            }
+            responseCache.put(key, response); // 성공 응답만 캐시(오류는 다음에 재시도)
+        }
+        return response;
+    }
+
+    private KmaForecastResponse requestApi(GridConverter.Grid grid, KmaBaseTime.BaseTime base) {
         try {
             return webClient.get()
                     .uri(uri -> uri.path("/getVilageFcst")

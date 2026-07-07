@@ -5,6 +5,7 @@ import com.haeyaji.be.recommend.application.port.out.PlaceSearchQuery;
 import com.haeyaji.be.recommend.domain.Coordinates;
 import com.haeyaji.be.recommend.domain.Place;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -43,10 +44,16 @@ public class KakaoLocalClient implements PlaceProvider {
     private final ObjectMapper objectMapper;
     private final String restKey;
 
+    @Autowired
     public KakaoLocalClient(ObjectMapper objectMapper,
                             @Value("${haeyaji.kakao.base-url}") String baseUrl,
                             @Value("${haeyaji.kakao.rest-key:}") String restKey) {
-        this.webClient = WebClient.builder().baseUrl(baseUrl).build();
+        this(objectMapper, WebClient.builder().baseUrl(baseUrl).build(), restKey);
+    }
+
+    /** 테스트용: WebClient(ExchangeFunction 스텁)를 직접 주입해 HTTP 없이 매핑 검증. */
+    KakaoLocalClient(ObjectMapper objectMapper, WebClient webClient, String restKey) {
+        this.webClient = webClient;
         this.objectMapper = objectMapper;
         this.restKey = restKey;
     }

@@ -15,6 +15,10 @@ server:
 haeyaji:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}
+  # 카카오 로컬 API (장소검색·지오코딩). nlp 대행 프록시용 — REST 키는 be가 일원 보유.
+  kakao:
+    rest-key: ${KAKAO_REST_KEY:}
+    base-url: https://dapi.kakao.com
   weather:
     kma:
       auth-key: ${KMA_AUTH_KEY:}

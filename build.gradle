@@ -23,6 +23,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     // WebClient (기상청 등 외부 API 중계)
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
+    // JPA (todo 등 DB를 쓰는 도메인)
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    runtimeOnly 'com.mysql:mysql-connector-j'
 
     // 로컬 개발 편의: 클래스 변경 시 자동 재시작 (운영 빌드엔 미포함)
     developmentOnly 'org.springframework.boot:spring-boot-devtools'

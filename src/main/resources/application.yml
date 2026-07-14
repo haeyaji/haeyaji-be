@@ -4,6 +4,18 @@ spring:
   # 실제 키는 gitignore된 application-secret.yml 에서 로드(없으면 무시). 값은 아래 ${ENV:} 로도 주입 가능.
   config:
     import: optional:file:application-secret.yml
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/haeyaji}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
+  jpa:
+    hibernate:
+      # 개발 편의: 엔티티 기준으로 테이블 자동 생성/반영. 운영 전환 시 마이그레이션 도구로 교체 필요.
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
 
 server:
   # sapari-be(기본 8080)와 충돌 방지. 필요 시 SERVER_PORT로 override.

@@ -1,4 +1,4 @@
 /**
- * profile 도메인: 선호 프로필 모델·보정 규칙.
+ * 개인화 프로필 (FR-7) — 핵심 도메인 객체·규칙 (엔티티/값객체).
  */
 package com.haeyaji.be.profile.domain;

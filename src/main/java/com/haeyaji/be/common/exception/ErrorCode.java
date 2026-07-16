@@ -6,7 +6,7 @@ import org.springframework.http.HttpStatus;
 
 @Getter
 @RequiredArgsConstructor
-public enum ErrorCode {
+public enum ErrorCode implements ResponseCode {
 
     INVALID_PARAMETER(HttpStatus.BAD_REQUEST, "요청 파라미터가 올바르지 않습니다."),
     WEATHER_UPSTREAM_ERROR(HttpStatus.BAD_GATEWAY, "날씨 정보를 가져오지 못했습니다."),

@@ -31,4 +31,14 @@ public record ApiResponse<T>(
         );
     }
 
+    public static <T> ApiResponse<T> fail(ResponseCode responseCode) {
+        return new ApiResponse<>(
+                false,
+                responseCode.getStatus().name(),
+                responseCode.getMessage(),
+                null,
+                Instant.now()
+        );
+    }
+
 }

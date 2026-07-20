@@ -16,6 +16,6 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 public class ImmutableBaseEntity extends UuidBaseEntity {
 
     @CreatedDate
-    private LocalDateTime updatedAt;
+    private LocalDateTime createdAt;
 
 }

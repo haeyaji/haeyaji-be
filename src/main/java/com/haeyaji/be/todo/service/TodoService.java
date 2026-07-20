@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -23,6 +24,7 @@ import java.util.List;
 public class TodoService {
 
     private final TodoRepository todoRepository;
+    private final Clock clock;
 
     public List<Todo> getTodosByDate(LocalDate date) {
         return todoRepository.findByTodoDate(date).stream()
@@ -32,6 +34,9 @@ public class TodoService {
 
     @Transactional
     public Todo createTodo(TodoRequest request) {
+        if (request.todoDate().isBefore(LocalDate.now(clock))) {
+            throw new BusinessException(ErrorCode.PAST_DATE_NOT_ALLOWED);
+        }
         TodoSource source = request.source() != null ? request.source() : TodoSource.MANUAL;
         TodoEntity entity = TodoEntity.create(
                 request.title(),

@@ -15,6 +15,8 @@ public enum ErrorCode implements ResponseCode {
     METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "지원하지 않는 HTTP Method입니다."),
     NOT_FOUND(HttpStatus.NOT_FOUND, "요청한 리소스를 찾을 수 없습니다."),
 
+    PAST_DATE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "과거 날짜에는 할 일을 추가할 수 없습니다."),
+
     ;
     private final HttpStatus status;
     private final String message;

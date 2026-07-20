@@ -5,6 +5,34 @@ spring:
   config:
     import: optional:file:application-secret.yml
 
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:haeyaji_db}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useUnicode=true&allowPublicKeyRetrieval=true&useSSL=false
+    username: ${MYSQL_USER:haeyaji}
+    password: ${MYSQL_PASSWORD:haeyaji12!@}
+
+    hikari:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      pool-name: HikariPool
+      # Connection
+      auto-commit: false
+      connection-test-query: SELECT 1
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        show_sql: false
+        format_sql: true
+        default_batch_fetch_size: 100
+
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
+    org.hibernate.orm.jdbc.extract: TRACE # 조회 결과 확인(선택)
+
 server:
   # sapari-be(기본 8080)와 충돌 방지. 필요 시 SERVER_PORT로 override.
   port: ${SERVER_PORT:8090}

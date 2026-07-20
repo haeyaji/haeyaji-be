@@ -1,0 +1,30 @@
+services:
+  mysql:
+    image: mysql:8.0.35
+    container_name: haeyaji-mysql
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Seoul
+
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-haeyaji12!@}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-haeyaji_db}
+      MYSQL_USER: ${MYSQL_USER:-haeyaji}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-haeyaji12!@}
+
+    command:
+      - --default-time-zone=Asia/Seoul
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --max-connections=200
+      - --log-bin-trust-function-creators=1
+
+    ports:
+      - "3306:3306"
+
+    volumes:
+      - mysql_db:/var/lib/mysql
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+
+volumes:
+  mysql_db:

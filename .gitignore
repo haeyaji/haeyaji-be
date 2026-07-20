@@ -30,6 +30,6 @@ build/
 .DS_Store
 
 ### 환경/비밀 ###
-.env
+.env*
 application-local.yml
 application-secret.yml

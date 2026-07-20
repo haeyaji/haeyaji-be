@@ -35,7 +35,7 @@ spring:
           kakao:
             client-id: 1cfea2e7d45ecaf9be374cb0b78a40b1 # REST API key
             client-secret: mqelwi2XBpofFz5T51U7aRUuRzUj8SIV
-            redirect-uri: http://localhost:8080/login/oauth2/code/kakao
+            redirect-uri: http://localhost:8090/api/login/oauth2/code/kakao
             client-authentication-method: client_secret_post
             authorization-grant-type: authorization_code
             scope: openid, profile_nickname, profile_image
@@ -44,7 +44,7 @@ spring:
             client-name: muzi-jwt-demo              # [선택] 서비스 이름 (로그인 창 띄울 때 식별용)
             client-id: L2mbZIxSFse73rysaEK4     # [★필수] 네이버 개발자 센터에서 발급받은 ID
             client-secret: wlDcKU_p3S   # [★필수] 네이버 개발자 센터에서 발급받은 비밀키
-            redirect-uri: http://localhost:8080/login/oauth2/code/naver # [★필수] 인가 코드를 받을 내 서버 주소
+            redirect-uri: http://localhost:8090/api/login/oauth2/code/naver # [★필수] 인가 코드를 받을 내 서버 주소
             authorization-grant-type: authorization_code # [★필수] OAuth2 인증 방식 (항상 이 값 고정)
             # 네이버는 표준 OIDC(id_token)를 지원하지 않는 순수 OAuth2 provider라 openid 스코프를 쓰면 안 됨
             scope: name,email

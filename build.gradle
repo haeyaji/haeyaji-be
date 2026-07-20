@@ -19,13 +19,25 @@ repositories {
 
 dependencies {
     // Web (MVC 컨트롤러)
-    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     // WebClient (기상청 등 외부 API 중계)
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
 
+    // persistence management
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+    // mysql connection
+    runtimeOnly 'com.mysql:mysql-connector-j'
+
+    // logstash logback
+    implementation 'net.logstash.logback:logstash-logback-encoder:8.0'
+
     // 로컬 개발 편의: 클래스 변경 시 자동 재시작 (운영 빌드엔 미포함)
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+    //
+    runtimeOnly 'org.springframework.boot:spring-boot-docker-compose'
 
     // DB
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'

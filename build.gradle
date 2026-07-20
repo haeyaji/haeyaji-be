@@ -39,10 +39,6 @@ dependencies {
     //
     runtimeOnly 'org.springframework.boot:spring-boot-docker-compose'
 
-    // DB
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    runtimeOnly 'com.mysql:mysql-connector-j'
-
     // Security/oauth
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-security-oauth2-client'

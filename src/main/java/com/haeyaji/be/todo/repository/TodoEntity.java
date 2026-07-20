@@ -82,6 +82,13 @@ public class TodoEntity {
         return entity;
     }
 
+    public void update(String title, LocalTime startTime, String location, String category) {
+        this.title = title;
+        this.startTime = startTime;
+        this.location = location;
+        this.category = category;
+    }
+
     public Todo toDomain() {
         return Todo.builder()
                 .id(id)

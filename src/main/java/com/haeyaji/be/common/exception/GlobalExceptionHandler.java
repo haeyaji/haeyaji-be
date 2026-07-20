@@ -2,6 +2,7 @@ package com.haeyaji.be.common.exception;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -24,6 +25,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public ResponseEntity<ErrorResponse> handleMissingParam(MissingServletRequestParameterException e) {
         log.warn("missing parameter: {}", e.getParameterName());
+        return ResponseEntity.status(ErrorCode.INVALID_PARAMETER.getStatus())
+                .body(ErrorResponse.of(ErrorCode.INVALID_PARAMETER));
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidBody(MethodArgumentNotValidException e) {
+        log.warn("invalid request body: {}", e.getMessage());
         return ResponseEntity.status(ErrorCode.INVALID_PARAMETER.getStatus())
                 .body(ErrorResponse.of(ErrorCode.INVALID_PARAMETER));
     }

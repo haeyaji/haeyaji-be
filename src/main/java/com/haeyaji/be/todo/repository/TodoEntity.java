@@ -69,6 +69,19 @@ public class TodoEntity {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    public static TodoEntity create(String title, LocalDate todoDate, LocalTime startTime,
+            String location, String category, TodoSource source) {
+        TodoEntity entity = new TodoEntity();
+        entity.title = title;
+        entity.todoDate = todoDate;
+        entity.startTime = startTime;
+        entity.location = location;
+        entity.category = category;
+        entity.source = source;
+        entity.status = TodoStatus.TODO;
+        return entity;
+    }
+
     public Todo toDomain() {
         return Todo.builder()
                 .id(id)

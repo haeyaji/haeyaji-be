@@ -1,6 +1,8 @@
 package com.haeyaji.be.todo.service;
 
 import com.haeyaji.be.todo.domain.Todo;
+import com.haeyaji.be.todo.domain.TodoSource;
+import com.haeyaji.be.todo.dto.TodoRequest;
 import com.haeyaji.be.todo.repository.TodoEntity;
 import com.haeyaji.be.todo.repository.TodoRepository;
 import lombok.RequiredArgsConstructor;
@@ -21,5 +23,19 @@ public class TodoService {
         return todoRepository.findByTodoDate(date).stream()
                 .map(TodoEntity::toDomain)
                 .toList();
+    }
+
+    @Transactional
+    public Todo createTodo(TodoRequest request) {
+        TodoSource source = request.source() != null ? request.source() : TodoSource.MANUAL;
+        TodoEntity entity = TodoEntity.create(
+                request.title(),
+                request.todoDate(),
+                request.startTime(),
+                request.location(),
+                request.category(),
+                source
+        );
+        return todoRepository.save(entity).toDomain();
     }
 }

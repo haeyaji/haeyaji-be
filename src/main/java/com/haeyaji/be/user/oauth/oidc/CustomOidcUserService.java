@@ -38,7 +38,7 @@ public class CustomOidcUserService extends OidcUserService {
         String userNameAttributeName = userRequest.getClientRegistration()
                 .getProviderDetails().getUserInfoEndpoint().getUserNameAttributeName();
 
-        var attrs = OAuthAttributes.of(socialType, userNameAttributeName, oidcUser.getAttributes());
+        OAuthAttributes attrs = OAuthAttributes.of(socialType, userNameAttributeName, oidcUser.getAttributes());
 
         User user = userRepository.findBySocialTypeAndSocialTypeId(attrs.socialType(), attrs.socialTypeId())
                 .map(existingUser -> existingUser.update(attrs.name(), attrs.email()))

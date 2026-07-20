@@ -27,6 +27,14 @@ dependencies {
     // 로컬 개발 편의: 클래스 변경 시 자동 재시작 (운영 빌드엔 미포함)
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
 
+    // DB
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    runtimeOnly 'com.mysql:mysql-connector-j'
+
+    // Security/oauth
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-security-oauth2-client'
+
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
 

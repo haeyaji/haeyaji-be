@@ -1,10 +1,13 @@
 package com.haeyaji.be.user.domain;
 
+import com.haeyaji.be.common.jpa.MutableBaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import java.util.UUID;
 
 @Entity
 @Getter
@@ -13,11 +16,7 @@ import lombok.NoArgsConstructor;
         name = "users",
         uniqueConstraints = @UniqueConstraint(columnNames = {"social_type", "social_type_id"})
 )
-public class User {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class User extends MutableBaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "social_type", nullable = false, length = 20)

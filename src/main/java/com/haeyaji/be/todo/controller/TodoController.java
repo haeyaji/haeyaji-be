@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * 할 일 (FR-1).
@@ -73,7 +74,7 @@ public class TodoController {
 
     @PatchMapping("/{id}")
     public ApiResponse<TodoResponse> updateTodo(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @Valid @RequestBody TodoUpdateRequest request
     ) {
         TodoResponse todo = TodoResponse.from(todoService.updateTodo(id, request));
@@ -81,13 +82,13 @@ public class TodoController {
     }
 
     @PatchMapping("/{id}/toggle")
-    public ApiResponse<TodoResponse> toggleTodo(@PathVariable Long id) {
+    public ApiResponse<TodoResponse> toggleTodo(@PathVariable UUID id) {
         TodoResponse todo = TodoResponse.from(todoService.toggleTodo(id));
         return ApiResponse.of(todo, SuccessCode.PUT_SUCCESS);
     }
 
     @DeleteMapping("/{id}")
-    public ApiResponse<Void> deleteTodo(@PathVariable Long id) {
+    public ApiResponse<Void> deleteTodo(@PathVariable UUID id) {
         todoService.deleteTodo(id);
         return ApiResponse.of(null, SuccessCode.DELETE_SUCCESS);
     }

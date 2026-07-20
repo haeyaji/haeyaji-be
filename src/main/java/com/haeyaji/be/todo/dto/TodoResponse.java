@@ -4,12 +4,13 @@ import com.haeyaji.be.todo.domain.Todo;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.UUID;
 
 /**
  * 할 일 응답 (camelCase).
  */
 public record TodoResponse(
-        Long id,
+        UUID id,
         String title,
         LocalDate todoDate,
         LocalTime startTime,

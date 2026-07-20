@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -50,7 +51,7 @@ public class TodoService {
     }
 
     @Transactional
-    public Todo updateTodo(Long id, TodoUpdateRequest request) {
+    public Todo updateTodo(UUID id, TodoUpdateRequest request) {
         TodoEntity entity = todoRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         entity.update(request.title(), request.startTime(), request.location(), request.category());
@@ -58,7 +59,7 @@ public class TodoService {
     }
 
     @Transactional
-    public Todo toggleTodo(Long id) {
+    public Todo toggleTodo(UUID id) {
         TodoEntity entity = todoRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         entity.toggleComplete();
@@ -66,7 +67,7 @@ public class TodoService {
     }
 
     @Transactional
-    public void deleteTodo(Long id) {
+    public void deleteTodo(UUID id) {
         TodoEntity entity = todoRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         todoRepository.delete(entity);

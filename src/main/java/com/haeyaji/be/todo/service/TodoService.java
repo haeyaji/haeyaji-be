@@ -3,7 +3,9 @@ package com.haeyaji.be.todo.service;
 import com.haeyaji.be.common.exception.BusinessException;
 import com.haeyaji.be.common.exception.ErrorCode;
 import com.haeyaji.be.todo.domain.Todo;
+import com.haeyaji.be.todo.domain.TodoCount;
 import com.haeyaji.be.todo.domain.TodoSource;
+import com.haeyaji.be.todo.domain.TodoStatus;
 import com.haeyaji.be.todo.dto.TodoRequest;
 import com.haeyaji.be.todo.dto.TodoUpdateRequest;
 import com.haeyaji.be.todo.repository.TodoEntity;
@@ -63,5 +65,11 @@ public class TodoService {
         TodoEntity entity = todoRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         todoRepository.delete(entity);
+    }
+
+    public TodoCount getTodoCount(LocalDate date) {
+        long total = todoRepository.countByTodoDate(date);
+        long completed = todoRepository.countByTodoDateAndStatus(date, TodoStatus.DONE);
+        return new TodoCount((int) total, (int) completed);
     }
 }

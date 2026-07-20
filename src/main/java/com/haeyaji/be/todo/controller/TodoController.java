@@ -2,6 +2,7 @@ package com.haeyaji.be.todo.controller;
 
 import com.haeyaji.be.common.response.ApiResponse;
 import com.haeyaji.be.common.response.SuccessCode;
+import com.haeyaji.be.todo.dto.TodoCountResponse;
 import com.haeyaji.be.todo.dto.TodoRequest;
 import com.haeyaji.be.todo.dto.TodoResponse;
 import com.haeyaji.be.todo.dto.TodoUpdateRequest;
@@ -29,6 +30,7 @@ import java.util.List;
  *
  * <pre>
  * GET    /api/todos?date={yyyy-MM-dd}
+ * GET    /api/todos/count?date={yyyy-MM-dd}
  * POST   /api/todos
  * PATCH  /api/todos/{id}
  * PATCH  /api/todos/{id}/toggle
@@ -51,6 +53,15 @@ public class TodoController {
                 .map(TodoResponse::from)
                 .toList();
         return ApiResponse.of(todos, SuccessCode.GET_SUCCESS);
+    }
+
+    @GetMapping("/count")
+    public ApiResponse<TodoCountResponse> getTodoCount(
+            @RequestParam
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+    ) {
+        TodoCountResponse count = TodoCountResponse.from(todoService.getTodoCount(date));
+        return ApiResponse.of(count, SuccessCode.GET_SUCCESS);
     }
 
     @PostMapping

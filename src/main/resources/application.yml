@@ -66,6 +66,11 @@ spring:
             # CustomOAuth2UserService에서 response를 풀어줘야 함
             user-name-attribute: response
 
+jwt:
+  secret: ${JWT_SECRET:umYvF4r3xwUfSUUMBHojtdUfhCxb/vUd4p+h6lRGCKZaw89GN5f1LhF51MEYtqrBvk3EjlDHDBGthC1eOhTQgg==}
+  access-token-validity-ms: 60000     # 1분
+  refresh-token-validity-ms: 300000
+
 logging:
   level:
     org.hibernate.SQL: DEBUG

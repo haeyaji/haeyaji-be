@@ -42,4 +42,11 @@ public class User {
         this.email = email;
         this.role = (role != null) ? role : UserRole.ROLE_USER;
     }
+
+    public User update(String name, String email) {
+        this.name = name;
+        this.email = email;
+
+        return this;
+    }
 }

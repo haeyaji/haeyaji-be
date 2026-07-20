@@ -33,7 +33,7 @@ public class SecurityConfig {
                 )
 
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/login/**", "/oauth2/**").permitAll()
+                        .requestMatchers("/", "/login/**", "/oauth2/**", "/weather/**", "/places/**").permitAll()
                         .anyRequest().authenticated())
 
                 ;

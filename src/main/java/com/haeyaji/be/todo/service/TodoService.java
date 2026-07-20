@@ -57,4 +57,11 @@ public class TodoService {
         entity.toggleComplete();
         return entity.toDomain();
     }
+
+    @Transactional
+    public void deleteTodo(Long id) {
+        TodoEntity entity = todoRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        todoRepository.delete(entity);
+    }
 }

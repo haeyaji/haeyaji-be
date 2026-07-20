@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,10 +28,11 @@ import java.util.List;
  * 할 일 (FR-1).
  *
  * <pre>
- * GET   /api/todos?date={yyyy-MM-dd}
- * POST  /api/todos
- * PATCH /api/todos/{id}
- * PATCH /api/todos/{id}/toggle
+ * GET    /api/todos?date={yyyy-MM-dd}
+ * POST   /api/todos
+ * PATCH  /api/todos/{id}
+ * PATCH  /api/todos/{id}/toggle
+ * DELETE /api/todos/{id}
  * </pre>
  */
 @RestController
@@ -71,5 +73,11 @@ public class TodoController {
     public ApiResponse<TodoResponse> toggleTodo(@PathVariable Long id) {
         TodoResponse todo = TodoResponse.from(todoService.toggleTodo(id));
         return ApiResponse.of(todo, SuccessCode.PUT_SUCCESS);
+    }
+
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> deleteTodo(@PathVariable Long id) {
+        todoService.deleteTodo(id);
+        return ApiResponse.of(null, SuccessCode.DELETE_SUCCESS);
     }
 }

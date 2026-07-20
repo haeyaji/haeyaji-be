@@ -49,4 +49,12 @@ public class TodoService {
         entity.update(request.title(), request.startTime(), request.location(), request.category());
         return entity.toDomain();
     }
+
+    @Transactional
+    public Todo toggleTodo(Long id) {
+        TodoEntity entity = todoRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        entity.toggleComplete();
+        return entity.toDomain();
+    }
 }

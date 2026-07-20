@@ -89,6 +89,10 @@ public class TodoEntity {
         this.category = category;
     }
 
+    public void toggleComplete() {
+        this.status = (this.status == TodoStatus.DONE) ? TodoStatus.TODO : TodoStatus.DONE;
+    }
+
     public Todo toDomain() {
         return Todo.builder()
                 .id(id)

@@ -30,6 +30,7 @@ import java.util.List;
  * GET   /api/todos?date={yyyy-MM-dd}
  * POST  /api/todos
  * PATCH /api/todos/{id}
+ * PATCH /api/todos/{id}/toggle
  * </pre>
  */
 @RestController
@@ -63,6 +64,12 @@ public class TodoController {
             @Valid @RequestBody TodoUpdateRequest request
     ) {
         TodoResponse todo = TodoResponse.from(todoService.updateTodo(id, request));
+        return ApiResponse.of(todo, SuccessCode.PUT_SUCCESS);
+    }
+
+    @PatchMapping("/{id}/toggle")
+    public ApiResponse<TodoResponse> toggleTodo(@PathVariable Long id) {
+        TodoResponse todo = TodoResponse.from(todoService.toggleTodo(id));
         return ApiResponse.of(todo, SuccessCode.PUT_SUCCESS);
     }
 }

@@ -40,6 +40,8 @@ public class TodoService {
             throw new BusinessException(ErrorCode.PAST_DATE_NOT_ALLOWED);
         }
         TodoSource source = request.source() != null ? request.source() : TodoSource.MANUAL;
+        boolean pinned = request.pinned() != null ? request.pinned() : false;
+        int sortOrder = request.sortOrder() != null ? request.sortOrder() : 0;
         TodoEntity entity = TodoEntity.create(
                 request.title(),
                 request.todoDate(),
@@ -49,7 +51,9 @@ public class TodoService {
                 request.lat(),
                 request.lng(),
                 request.category(),
-                source
+                source,
+                pinned,
+                sortOrder
         );
         return todoRepository.save(entity).toDomain();
     }
@@ -58,8 +62,11 @@ public class TodoService {
     public Todo updateTodo(UUID id, TodoUpdateRequest request) {
         TodoEntity entity = todoRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        boolean pinned = request.pinned() != null ? request.pinned() : false;
+        int sortOrder = request.sortOrder() != null ? request.sortOrder() : 0;
         entity.update(request.title(), request.startTime(),
-                request.placeName(), request.placeUrl(), request.lat(), request.lng(), request.category());
+                request.placeName(), request.placeUrl(), request.lat(), request.lng(), request.category(),
+                pinned, sortOrder);
         return entity.toDomain();
     }
 

@@ -23,7 +23,9 @@ public record TodoResponse(
         String category,
         String source,
         UUID sourceRefId,
-        String status
+        String status,
+        boolean pinned,
+        int sortOrder
 ) {
 
     public static TodoResponse from(Todo todo) {
@@ -40,7 +42,9 @@ public record TodoResponse(
                 todo.category(),
                 todo.source().name(),
                 todo.sourceRefId(),
-                todo.status().name()
+                todo.status().name(),
+                todo.pinned(),
+                todo.sortOrder()
         );
     }
 }

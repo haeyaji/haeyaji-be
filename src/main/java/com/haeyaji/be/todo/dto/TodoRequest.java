@@ -22,6 +22,8 @@ public record TodoRequest(
         Double lat,
         Double lng,
         @Size(max = 30) String category,
-        TodoSource source
+        TodoSource source,
+        Boolean pinned,
+        Integer sortOrder
 ) {
 }

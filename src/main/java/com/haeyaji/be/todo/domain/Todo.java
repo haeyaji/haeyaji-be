@@ -25,6 +25,8 @@ public record Todo(
         TodoSource source,
         UUID sourceRefId,
         TodoStatus status,
+        boolean pinned,
+        int sortOrder,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {

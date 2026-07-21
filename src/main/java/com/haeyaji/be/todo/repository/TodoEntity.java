@@ -64,8 +64,15 @@ public class TodoEntity extends MutableBaseEntity {
     @Column(nullable = false, length = 20)
     private TodoStatus status;
 
+    @Column(nullable = false)
+    private boolean pinned;
+
+    @Column(name = "sort_order", nullable = false)
+    private int sortOrder;
+
     public static TodoEntity create(String title, LocalDate todoDate, LocalTime startTime,
-            String placeName, String placeUrl, Double lat, Double lng, String category, TodoSource source) {
+            String placeName, String placeUrl, Double lat, Double lng, String category, TodoSource source,
+            boolean pinned, int sortOrder) {
         TodoEntity entity = new TodoEntity();
         entity.title = title;
         entity.todoDate = todoDate;
@@ -77,11 +84,14 @@ public class TodoEntity extends MutableBaseEntity {
         entity.category = category;
         entity.source = source;
         entity.status = TodoStatus.TODO;
+        entity.pinned = pinned;
+        entity.sortOrder = sortOrder;
         return entity;
     }
 
     public void update(String title, LocalTime startTime,
-            String placeName, String placeUrl, Double lat, Double lng, String category) {
+            String placeName, String placeUrl, Double lat, Double lng, String category,
+            boolean pinned, int sortOrder) {
         this.title = title;
         this.startTime = startTime;
         this.placeName = placeName;
@@ -89,6 +99,8 @@ public class TodoEntity extends MutableBaseEntity {
         this.lat = lat;
         this.lng = lng;
         this.category = category;
+        this.pinned = pinned;
+        this.sortOrder = sortOrder;
     }
 
     public void toggleComplete(LocalDateTime now) {
@@ -116,6 +128,8 @@ public class TodoEntity extends MutableBaseEntity {
                 .source(source)
                 .sourceRefId(sourceRefId)
                 .status(status)
+                .pinned(pinned)
+                .sortOrder(sortOrder)
                 .createdAt(getCreatedAt())
                 .updatedAt(getUpdatedAt())
                 .build();

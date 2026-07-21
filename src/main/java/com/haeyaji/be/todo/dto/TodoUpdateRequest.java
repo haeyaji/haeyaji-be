@@ -16,6 +16,8 @@ public record TodoUpdateRequest(
         @Size(max = 300) String placeUrl,
         Double lat,
         Double lng,
-        @Size(max = 30) String category
+        @Size(max = 30) String category,
+        Boolean pinned,
+        Integer sortOrder
 ) {
 }

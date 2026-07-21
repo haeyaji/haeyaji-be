@@ -36,8 +36,18 @@ public class TodoEntity extends MutableBaseEntity {
     @Column(name = "start_time")
     private LocalTime startTime;
 
-    @Column(length = 200)
-    private String location;
+    @Column(name = "end_time")
+    private LocalTime endTime;
+
+    @Column(name = "place_name", length = 100)
+    private String placeName;
+
+    @Column(name = "place_url", length = 300)
+    private String placeUrl;
+
+    private Double lat;
+
+    private Double lng;
 
     @Column(length = 30)
     private String category;
@@ -53,23 +63,32 @@ public class TodoEntity extends MutableBaseEntity {
     @Column(nullable = false, length = 20)
     private TodoStatus status;
 
-    public static TodoEntity create(String title, LocalDate todoDate, LocalTime startTime,
-            String location, String category, TodoSource source) {
+    public static TodoEntity create(String title, LocalDate todoDate, LocalTime startTime, LocalTime endTime,
+            String placeName, String placeUrl, Double lat, Double lng, String category, TodoSource source) {
         TodoEntity entity = new TodoEntity();
         entity.title = title;
         entity.todoDate = todoDate;
         entity.startTime = startTime;
-        entity.location = location;
+        entity.endTime = endTime;
+        entity.placeName = placeName;
+        entity.placeUrl = placeUrl;
+        entity.lat = lat;
+        entity.lng = lng;
         entity.category = category;
         entity.source = source;
         entity.status = TodoStatus.TODO;
         return entity;
     }
 
-    public void update(String title, LocalTime startTime, String location, String category) {
+    public void update(String title, LocalTime startTime, LocalTime endTime,
+            String placeName, String placeUrl, Double lat, Double lng, String category) {
         this.title = title;
         this.startTime = startTime;
-        this.location = location;
+        this.endTime = endTime;
+        this.placeName = placeName;
+        this.placeUrl = placeUrl;
+        this.lat = lat;
+        this.lng = lng;
         this.category = category;
     }
 
@@ -83,7 +102,11 @@ public class TodoEntity extends MutableBaseEntity {
                 .title(title)
                 .todoDate(todoDate)
                 .startTime(startTime)
-                .location(location)
+                .endTime(endTime)
+                .placeName(placeName)
+                .placeUrl(placeUrl)
+                .lat(lat)
+                .lng(lng)
                 .category(category)
                 .source(source)
                 .sourceRefId(sourceRefId)

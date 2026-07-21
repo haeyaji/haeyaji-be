@@ -43,7 +43,11 @@ public class TodoService {
                 request.title(),
                 request.todoDate(),
                 request.startTime(),
-                request.location(),
+                request.endTime(),
+                request.placeName(),
+                request.placeUrl(),
+                request.lat(),
+                request.lng(),
                 request.category(),
                 source
         );
@@ -54,7 +58,8 @@ public class TodoService {
     public Todo updateTodo(UUID id, TodoUpdateRequest request) {
         TodoEntity entity = todoRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-        entity.update(request.title(), request.startTime(), request.location(), request.category());
+        entity.update(request.title(), request.startTime(), request.endTime(),
+                request.placeName(), request.placeUrl(), request.lat(), request.lng(), request.category());
         return entity.toDomain();
     }
 

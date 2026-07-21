@@ -3,9 +3,7 @@ package com.haeyaji.be.todo.service;
 import com.haeyaji.be.common.exception.BusinessException;
 import com.haeyaji.be.common.exception.ErrorCode;
 import com.haeyaji.be.todo.domain.Todo;
-import com.haeyaji.be.todo.domain.TodoCount;
 import com.haeyaji.be.todo.domain.TodoSource;
-import com.haeyaji.be.todo.domain.TodoStatus;
 import com.haeyaji.be.todo.dto.TodoRequest;
 import com.haeyaji.be.todo.dto.TodoUpdateRequest;
 import com.haeyaji.be.todo.repository.TodoEntity;
@@ -36,7 +34,7 @@ public class TodoService {
 
     @Transactional
     public Todo createTodo(TodoRequest request) {
-        if (request.todoDate().isBefore(LocalDate.now(clock))) {
+        if (request.date().isBefore(LocalDate.now(clock))) {
             throw new BusinessException(ErrorCode.PAST_DATE_NOT_ALLOWED);
         }
         TodoSource source = request.source() != null ? request.source() : TodoSource.MANUAL;
@@ -44,8 +42,8 @@ public class TodoService {
         int sortOrder = request.sortOrder() != null ? request.sortOrder() : 0;
         TodoEntity entity = TodoEntity.create(
                 request.title(),
-                request.todoDate(),
-                request.startTime(),
+                request.date(),
+                request.time(),
                 request.placeName(),
                 request.placeUrl(),
                 request.lat(),
@@ -64,17 +62,12 @@ public class TodoService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         boolean pinned = request.pinned() != null ? request.pinned() : false;
         int sortOrder = request.sortOrder() != null ? request.sortOrder() : 0;
-        entity.update(request.title(), request.startTime(),
+        entity.update(request.title(), request.time(),
                 request.placeName(), request.placeUrl(), request.lat(), request.lng(), request.category(),
                 pinned, sortOrder);
-        return entity.toDomain();
-    }
-
-    @Transactional
-    public Todo toggleTodo(UUID id) {
-        TodoEntity entity = todoRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-        entity.toggleComplete(LocalDateTime.now(clock));
+        if (request.completed() != null) {
+            entity.setCompleted(request.completed(), LocalDateTime.now(clock));
+        }
         return entity.toDomain();
     }
 
@@ -83,11 +76,5 @@ public class TodoService {
         TodoEntity entity = todoRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         todoRepository.delete(entity);
-    }
-
-    public TodoCount getTodoCount(LocalDate date) {
-        long total = todoRepository.countByTodoDate(date);
-        long completed = todoRepository.countByTodoDateAndStatus(date, TodoStatus.DONE);
-        return new TodoCount((int) total, (int) completed);
     }
 }

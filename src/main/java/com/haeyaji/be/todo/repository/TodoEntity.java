@@ -103,13 +103,13 @@ public class TodoEntity extends MutableBaseEntity {
         this.sortOrder = sortOrder;
     }
 
-    public void toggleComplete(LocalDateTime now) {
-        if (this.status == TodoStatus.DONE) {
-            this.status = TodoStatus.TODO;
-            this.endedAt = null;
-        } else {
+    public void setCompleted(boolean completed, LocalDateTime now) {
+        if (completed) {
             this.status = TodoStatus.DONE;
             this.endedAt = now;
+        } else {
+            this.status = TodoStatus.TODO;
+            this.endedAt = null;
         }
     }
 

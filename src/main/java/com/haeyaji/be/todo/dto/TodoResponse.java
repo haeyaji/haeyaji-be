@@ -1,6 +1,7 @@
 package com.haeyaji.be.todo.dto;
 
 import com.haeyaji.be.todo.domain.Todo;
+import com.haeyaji.be.todo.domain.TodoStatus;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -13,8 +14,8 @@ import java.util.UUID;
 public record TodoResponse(
         UUID id,
         String title,
-        LocalDate todoDate,
-        LocalTime startTime,
+        LocalDate date,
+        LocalTime time,
         LocalDateTime endedAt,
         String placeName,
         String placeUrl,
@@ -23,7 +24,7 @@ public record TodoResponse(
         String category,
         String source,
         UUID sourceRefId,
-        String status,
+        boolean completed,
         boolean pinned,
         int sortOrder
 ) {
@@ -42,7 +43,7 @@ public record TodoResponse(
                 todo.category(),
                 todo.source().name(),
                 todo.sourceRefId(),
-                todo.status().name(),
+                todo.status() == TodoStatus.DONE,
                 todo.pinned(),
                 todo.sortOrder()
         );

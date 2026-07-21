@@ -1,0 +1,95 @@
+package com.haeyaji.be.todo.controller;
+
+import com.haeyaji.be.common.response.ApiResponse;
+import com.haeyaji.be.common.response.SuccessCode;
+import com.haeyaji.be.todo.dto.TodoCountResponse;
+import com.haeyaji.be.todo.dto.TodoRequest;
+import com.haeyaji.be.todo.dto.TodoResponse;
+import com.haeyaji.be.todo.dto.TodoUpdateRequest;
+import com.haeyaji.be.todo.service.TodoService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.UUID;
+
+/**
+ * 할 일 (FR-1).
+ *
+ * <pre>
+ * GET    /api/todos?date={yyyy-MM-dd}
+ * GET    /api/todos/count?date={yyyy-MM-dd}
+ * POST   /api/todos
+ * PATCH  /api/todos/{id}
+ * PATCH  /api/todos/{id}/toggle
+ * DELETE /api/todos/{id}
+ * </pre>
+ */
+@RestController
+@RequestMapping("/todos")
+@RequiredArgsConstructor
+public class TodoController {
+
+    private final TodoService todoService;
+
+    @GetMapping
+    public ApiResponse<List<TodoResponse>> getTodos(
+            @RequestParam
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+    ) {
+        List<TodoResponse> todos = todoService.getTodosByDate(date).stream()
+                .map(TodoResponse::from)
+                .toList();
+        return ApiResponse.of(todos, SuccessCode.GET_SUCCESS);
+    }
+
+    @GetMapping("/count")
+    public ApiResponse<TodoCountResponse> getTodoCount(
+            @RequestParam
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+    ) {
+        TodoCountResponse count = TodoCountResponse.from(todoService.getTodoCount(date));
+        return ApiResponse.of(count, SuccessCode.GET_SUCCESS);
+    }
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse<TodoResponse> createTodo(@Valid @RequestBody TodoRequest request) {
+        TodoResponse todo = TodoResponse.from(todoService.createTodo(request));
+        return ApiResponse.of(todo, SuccessCode.POST_SUCCESS);
+    }
+
+    @PatchMapping("/{id}")
+    public ApiResponse<TodoResponse> updateTodo(
+            @PathVariable UUID id,
+            @Valid @RequestBody TodoUpdateRequest request
+    ) {
+        TodoResponse todo = TodoResponse.from(todoService.updateTodo(id, request));
+        return ApiResponse.of(todo, SuccessCode.PUT_SUCCESS);
+    }
+
+    @PatchMapping("/{id}/toggle")
+    public ApiResponse<TodoResponse> toggleTodo(@PathVariable UUID id) {
+        TodoResponse todo = TodoResponse.from(todoService.toggleTodo(id));
+        return ApiResponse.of(todo, SuccessCode.PUT_SUCCESS);
+    }
+
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> deleteTodo(@PathVariable UUID id) {
+        todoService.deleteTodo(id);
+        return ApiResponse.of(null, SuccessCode.DELETE_SUCCESS);
+    }
+}

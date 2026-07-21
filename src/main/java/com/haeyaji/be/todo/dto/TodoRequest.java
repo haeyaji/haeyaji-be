@@ -17,7 +17,6 @@ public record TodoRequest(
         @NotBlank @Size(max = 100) String title,
         @NotNull LocalDate todoDate,
         LocalTime startTime,
-        LocalTime endTime,
         @Size(max = 100) String placeName,
         @Size(max = 300) String placeUrl,
         Double lat,

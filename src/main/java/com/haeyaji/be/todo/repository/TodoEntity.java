@@ -14,6 +14,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.UUID;
 
@@ -36,8 +37,8 @@ public class TodoEntity extends MutableBaseEntity {
     @Column(name = "start_time")
     private LocalTime startTime;
 
-    @Column(name = "end_time")
-    private LocalTime endTime;
+    @Column(name = "ended_at")
+    private LocalDateTime endedAt;
 
     @Column(name = "place_name", length = 100)
     private String placeName;
@@ -63,13 +64,12 @@ public class TodoEntity extends MutableBaseEntity {
     @Column(nullable = false, length = 20)
     private TodoStatus status;
 
-    public static TodoEntity create(String title, LocalDate todoDate, LocalTime startTime, LocalTime endTime,
+    public static TodoEntity create(String title, LocalDate todoDate, LocalTime startTime,
             String placeName, String placeUrl, Double lat, Double lng, String category, TodoSource source) {
         TodoEntity entity = new TodoEntity();
         entity.title = title;
         entity.todoDate = todoDate;
         entity.startTime = startTime;
-        entity.endTime = endTime;
         entity.placeName = placeName;
         entity.placeUrl = placeUrl;
         entity.lat = lat;
@@ -80,11 +80,10 @@ public class TodoEntity extends MutableBaseEntity {
         return entity;
     }
 
-    public void update(String title, LocalTime startTime, LocalTime endTime,
+    public void update(String title, LocalTime startTime,
             String placeName, String placeUrl, Double lat, Double lng, String category) {
         this.title = title;
         this.startTime = startTime;
-        this.endTime = endTime;
         this.placeName = placeName;
         this.placeUrl = placeUrl;
         this.lat = lat;
@@ -92,8 +91,14 @@ public class TodoEntity extends MutableBaseEntity {
         this.category = category;
     }
 
-    public void toggleComplete() {
-        this.status = (this.status == TodoStatus.DONE) ? TodoStatus.TODO : TodoStatus.DONE;
+    public void toggleComplete(LocalDateTime now) {
+        if (this.status == TodoStatus.DONE) {
+            this.status = TodoStatus.TODO;
+            this.endedAt = null;
+        } else {
+            this.status = TodoStatus.DONE;
+            this.endedAt = now;
+        }
     }
 
     public Todo toDomain() {
@@ -102,7 +107,7 @@ public class TodoEntity extends MutableBaseEntity {
                 .title(title)
                 .todoDate(todoDate)
                 .startTime(startTime)
-                .endTime(endTime)
+                .endedAt(endedAt)
                 .placeName(placeName)
                 .placeUrl(placeUrl)
                 .lat(lat)

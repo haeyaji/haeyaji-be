@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -43,7 +44,6 @@ public class TodoService {
                 request.title(),
                 request.todoDate(),
                 request.startTime(),
-                request.endTime(),
                 request.placeName(),
                 request.placeUrl(),
                 request.lat(),
@@ -58,7 +58,7 @@ public class TodoService {
     public Todo updateTodo(UUID id, TodoUpdateRequest request) {
         TodoEntity entity = todoRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-        entity.update(request.title(), request.startTime(), request.endTime(),
+        entity.update(request.title(), request.startTime(),
                 request.placeName(), request.placeUrl(), request.lat(), request.lng(), request.category());
         return entity.toDomain();
     }
@@ -67,7 +67,7 @@ public class TodoService {
     public Todo toggleTodo(UUID id) {
         TodoEntity entity = todoRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-        entity.toggleComplete();
+        entity.toggleComplete(LocalDateTime.now(clock));
         return entity.toDomain();
     }
 

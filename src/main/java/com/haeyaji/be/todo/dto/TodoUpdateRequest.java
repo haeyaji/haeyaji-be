@@ -12,7 +12,6 @@ import java.time.LocalTime;
 public record TodoUpdateRequest(
         @NotBlank @Size(max = 100) String title,
         LocalTime startTime,
-        LocalTime endTime,
         @Size(max = 100) String placeName,
         @Size(max = 300) String placeUrl,
         Double lat,

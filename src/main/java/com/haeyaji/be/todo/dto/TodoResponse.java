@@ -3,6 +3,7 @@ package com.haeyaji.be.todo.dto;
 import com.haeyaji.be.todo.domain.Todo;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.UUID;
 
@@ -14,7 +15,7 @@ public record TodoResponse(
         String title,
         LocalDate todoDate,
         LocalTime startTime,
-        LocalTime endTime,
+        LocalDateTime endedAt,
         String placeName,
         String placeUrl,
         Double lat,
@@ -31,7 +32,7 @@ public record TodoResponse(
                 todo.title(),
                 todo.todoDate(),
                 todo.startTime(),
-                todo.endTime(),
+                todo.endedAt(),
                 todo.placeName(),
                 todo.placeUrl(),
                 todo.lat(),

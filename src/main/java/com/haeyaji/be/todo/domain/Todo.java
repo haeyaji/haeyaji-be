@@ -16,7 +16,7 @@ public record Todo(
         String title,
         LocalDate todoDate,
         LocalTime startTime,
-        LocalTime endTime,
+        LocalDateTime endedAt,
         String placeName,
         String placeUrl,
         Double lat,

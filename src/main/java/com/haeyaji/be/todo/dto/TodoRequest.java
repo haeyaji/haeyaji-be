@@ -11,13 +11,17 @@ import java.time.LocalTime;
 /**
  * 할 일 추가 요청. title/todoDate는 필수, 나머지는 선택.
  * source 미지정 시 서비스에서 {@link TodoSource#MANUAL}로 채운다.
- * 길이 제한은 {@code TodoEntity} 컬럼 길이(title 100/location 200/category 30)와 맞춘다.
+ * 길이 제한은 {@code TodoEntity} 컬럼 길이(title 100/placeName 100/placeUrl 300/category 30)와 맞춘다.
  */
 public record TodoRequest(
         @NotBlank @Size(max = 100) String title,
         @NotNull LocalDate todoDate,
         LocalTime startTime,
-        @Size(max = 200) String location,
+        LocalTime endTime,
+        @Size(max = 100) String placeName,
+        @Size(max = 300) String placeUrl,
+        Double lat,
+        Double lng,
         @Size(max = 30) String category,
         TodoSource source
 ) {

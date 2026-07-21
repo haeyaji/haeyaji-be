@@ -16,7 +16,7 @@ public record Todo(
         String title,
         LocalDate todoDate,
         LocalTime startTime,
-        LocalTime endTime,
+        LocalDateTime endedAt,
         String placeName,
         String placeUrl,
         Double lat,
@@ -25,6 +25,8 @@ public record Todo(
         TodoSource source,
         UUID sourceRefId,
         TodoStatus status,
+        boolean pinned,
+        int sortOrder,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {

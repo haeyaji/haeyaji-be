@@ -14,6 +14,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.UUID;
 
@@ -36,8 +37,8 @@ public class TodoEntity extends MutableBaseEntity {
     @Column(name = "start_time")
     private LocalTime startTime;
 
-    @Column(name = "end_time")
-    private LocalTime endTime;
+    @Column(name = "ended_at")
+    private LocalDateTime endedAt;
 
     @Column(name = "place_name", length = 100)
     private String placeName;
@@ -63,13 +64,19 @@ public class TodoEntity extends MutableBaseEntity {
     @Column(nullable = false, length = 20)
     private TodoStatus status;
 
-    public static TodoEntity create(String title, LocalDate todoDate, LocalTime startTime, LocalTime endTime,
-            String placeName, String placeUrl, Double lat, Double lng, String category, TodoSource source) {
+    @Column(nullable = false)
+    private boolean pinned;
+
+    @Column(name = "sort_order", nullable = false)
+    private int sortOrder;
+
+    public static TodoEntity create(String title, LocalDate todoDate, LocalTime startTime,
+            String placeName, String placeUrl, Double lat, Double lng, String category, TodoSource source,
+            boolean pinned, int sortOrder) {
         TodoEntity entity = new TodoEntity();
         entity.title = title;
         entity.todoDate = todoDate;
         entity.startTime = startTime;
-        entity.endTime = endTime;
         entity.placeName = placeName;
         entity.placeUrl = placeUrl;
         entity.lat = lat;
@@ -77,23 +84,33 @@ public class TodoEntity extends MutableBaseEntity {
         entity.category = category;
         entity.source = source;
         entity.status = TodoStatus.TODO;
+        entity.pinned = pinned;
+        entity.sortOrder = sortOrder;
         return entity;
     }
 
-    public void update(String title, LocalTime startTime, LocalTime endTime,
-            String placeName, String placeUrl, Double lat, Double lng, String category) {
+    public void update(String title, LocalTime startTime,
+            String placeName, String placeUrl, Double lat, Double lng, String category,
+            boolean pinned, int sortOrder) {
         this.title = title;
         this.startTime = startTime;
-        this.endTime = endTime;
         this.placeName = placeName;
         this.placeUrl = placeUrl;
         this.lat = lat;
         this.lng = lng;
         this.category = category;
+        this.pinned = pinned;
+        this.sortOrder = sortOrder;
     }
 
-    public void toggleComplete() {
-        this.status = (this.status == TodoStatus.DONE) ? TodoStatus.TODO : TodoStatus.DONE;
+    public void setCompleted(boolean completed, LocalDateTime now) {
+        if (completed) {
+            this.status = TodoStatus.DONE;
+            this.endedAt = now;
+        } else {
+            this.status = TodoStatus.TODO;
+            this.endedAt = null;
+        }
     }
 
     public Todo toDomain() {
@@ -102,7 +119,7 @@ public class TodoEntity extends MutableBaseEntity {
                 .title(title)
                 .todoDate(todoDate)
                 .startTime(startTime)
-                .endTime(endTime)
+                .endedAt(endedAt)
                 .placeName(placeName)
                 .placeUrl(placeUrl)
                 .lat(lat)
@@ -111,6 +128,8 @@ public class TodoEntity extends MutableBaseEntity {
                 .source(source)
                 .sourceRefId(sourceRefId)
                 .status(status)
+                .pinned(pinned)
+                .sortOrder(sortOrder)
                 .createdAt(getCreatedAt())
                 .updatedAt(getUpdatedAt())
                 .build();

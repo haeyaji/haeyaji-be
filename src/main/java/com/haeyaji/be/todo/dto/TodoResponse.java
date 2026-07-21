@@ -17,7 +17,7 @@ public record TodoResponse(
         String location,
         String category,
         String source,
-        Long sourceRefId,
+        UUID sourceRefId,
         String status
 ) {
 

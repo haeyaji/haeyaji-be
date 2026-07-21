@@ -19,7 +19,7 @@ public record Todo(
         String location,
         String category,
         TodoSource source,
-        Long sourceRefId,
+        UUID sourceRefId,
         TodoStatus status,
         LocalDateTime createdAt,
         LocalDateTime updatedAt

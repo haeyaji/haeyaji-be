@@ -15,6 +15,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.UUID;
 
 /**
  * 할 일 테이블(todo) 매핑. 비즈니스 로직은 여기 두지 않고 {@code domain.Todo}로 변환해 넘긴다.
@@ -46,7 +47,7 @@ public class TodoEntity extends MutableBaseEntity {
     private TodoSource source;
 
     @Column(name = "source_ref_id")
-    private Long sourceRefId;
+    private UUID sourceRefId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

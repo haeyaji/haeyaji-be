@@ -27,7 +27,7 @@ public class TodoService {
     private final Clock clock;
 
     public List<Todo> getTodosByDate(LocalDate date) {
-        return todoRepository.findByTodoDate(date).stream()
+        return todoRepository.findByTodoDateOrderByPinnedDescSortOrderAsc(date).stream()
                 .map(TodoEntity::toDomain)
                 .toList();
     }
@@ -58,13 +58,14 @@ public class TodoService {
 
     @Transactional
     public Todo updateTodo(UUID id, TodoUpdateRequest request) {
+        if (request.title() != null && request.title().isBlank()) {
+            throw new BusinessException(ErrorCode.INVALID_PARAMETER);
+        }
         TodoEntity entity = todoRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-        boolean pinned = request.pinned() != null ? request.pinned() : false;
-        int sortOrder = request.sortOrder() != null ? request.sortOrder() : 0;
         entity.update(request.title(), request.time(),
                 request.placeName(), request.placeUrl(), request.lat(), request.lng(), request.category(),
-                pinned, sortOrder);
+                request.pinned(), request.sortOrder());
         if (request.completed() != null) {
             entity.setCompleted(request.completed(), LocalDateTime.now(clock));
         }

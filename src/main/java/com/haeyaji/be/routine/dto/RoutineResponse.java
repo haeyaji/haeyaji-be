@@ -1,5 +1,6 @@
 package com.haeyaji.be.routine.dto;
 
+import com.haeyaji.be.routine.domain.DayPreset;
 import com.haeyaji.be.routine.domain.Routine;
 
 import java.time.DayOfWeek;
@@ -8,14 +9,15 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * 루틴 응답 (camelCase).
+ * 루틴 응답 (camelCase). preset은 저장된 days를 보고 be가 판정해서 내려준다(ROUT-2).
  */
 public record RoutineResponse(
         UUID id,
         String title,
         LocalTime startTime,
         boolean active,
-        Set<DayOfWeek> days
+        Set<DayOfWeek> days,
+        DayPreset preset
 ) {
 
     public static RoutineResponse from(Routine routine) {
@@ -24,7 +26,8 @@ public record RoutineResponse(
                 routine.title(),
                 routine.startTime(),
                 routine.active(),
-                routine.days()
+                routine.days(),
+                routine.preset()
         );
     }
 }

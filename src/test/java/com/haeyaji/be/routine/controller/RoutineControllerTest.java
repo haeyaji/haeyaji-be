@@ -1,6 +1,7 @@
 package com.haeyaji.be.routine.controller;
 
 import com.haeyaji.be.common.response.ApiResponse;
+import com.haeyaji.be.routine.domain.DayPreset;
 import com.haeyaji.be.routine.domain.Routine;
 import com.haeyaji.be.routine.dto.RoutineRequest;
 import com.haeyaji.be.routine.dto.RoutineResponse;
@@ -45,6 +46,7 @@ class RoutineControllerTest {
         assertThat(response.success()).isTrue();
         assertThat(response.data().title()).isEqualTo("아침 운동");
         assertThat(response.data().days()).containsExactly(DayOfWeek.MONDAY);
+        assertThat(response.data().preset()).isEqualTo(DayPreset.CUSTOM);
     }
 
     @Test

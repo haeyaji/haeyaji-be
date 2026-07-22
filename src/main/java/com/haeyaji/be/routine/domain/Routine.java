@@ -21,4 +21,11 @@ public record Routine(
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
+
+    /**
+     * 저장된 요일 조합이 어떤 프리셋(매일·평일·주말)에 해당하는지 판정. 어디에도 안 맞으면 CUSTOM.
+     */
+    public DayPreset preset() {
+        return DayPreset.from(days);
+    }
 }

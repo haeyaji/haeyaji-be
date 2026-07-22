@@ -1,5 +1,6 @@
 package com.haeyaji.be.routine.service;
 
+import com.haeyaji.be.routine.domain.DayPreset;
 import com.haeyaji.be.routine.domain.Routine;
 import com.haeyaji.be.routine.dto.RoutineRequest;
 import com.haeyaji.be.routine.repository.RoutineEntity;
@@ -30,6 +31,19 @@ class RoutineServiceTest {
         assertThat(routine.startTime()).isEqualTo(LocalTime.of(7, 0));
         assertThat(routine.active()).isTrue();
         assertThat(routine.days()).containsExactlyInAnyOrder(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY);
+        assertThat(routine.preset()).isEqualTo(DayPreset.CUSTOM);
+    }
+
+    @Test
+    void 요일이_평일이면_프리셋이_평일로_판정된다() {
+        RoutineRepository repo = mock(RoutineRepository.class);
+        when(repo.save(any(RoutineEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+        RoutineService service = new RoutineService(repo);
+
+        Routine routine = service.createRoutine(new RoutineRequest("출근", null,
+                Set.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY)));
+
+        assertThat(routine.preset()).isEqualTo(DayPreset.WEEKDAY);
     }
 
     @Test

@@ -3,6 +3,8 @@ package com.haeyaji.be.routine.controller;
 import com.haeyaji.be.common.response.ApiResponse;
 import com.haeyaji.be.routine.domain.DayPreset;
 import com.haeyaji.be.routine.domain.Routine;
+import com.haeyaji.be.routine.dto.RoutineApplyRequest;
+import com.haeyaji.be.routine.dto.RoutineApplyResponse;
 import com.haeyaji.be.routine.dto.RoutineRequest;
 import com.haeyaji.be.routine.dto.RoutineResponse;
 import com.haeyaji.be.routine.dto.RoutineUpdateRequest;
@@ -12,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.Set;
 import java.util.UUID;
@@ -85,5 +88,19 @@ class RoutineControllerTest {
         verify(service).deleteRoutine(id);
         assertThat(response.success()).isTrue();
         assertThat(response.data()).isNull();
+    }
+
+    @Test
+    void 일괄등록은_생성_건수를_담아_반환한다() {
+        RoutineService service = mock(RoutineService.class);
+        RoutineApplyRequest request = new RoutineApplyRequest(
+                LocalDate.of(2026, 7, 27), LocalDate.of(2026, 8, 2));
+        when(service.applyRoutines(request.from(), request.to())).thenReturn(new RoutineApplyResponse(3));
+        RoutineController controller = new RoutineController(service);
+
+        ApiResponse<RoutineApplyResponse> response = controller.applyRoutines(request);
+
+        assertThat(response.success()).isTrue();
+        assertThat(response.data().created()).isEqualTo(3);
     }
 }

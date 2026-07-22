@@ -90,6 +90,16 @@ public class TodoEntity extends MutableBaseEntity {
     }
 
     /**
+     * 루틴 일괄 등록(ROUT-4)용 생성. source=ROUTINE 고정, sourceRefId로 원본 루틴을 추적한다.
+     */
+    public static TodoEntity createFromRoutine(String title, LocalDate todoDate, LocalTime startTime, UUID routineId) {
+        TodoEntity entity = create(title, todoDate, startTime, null, null, null, null, null,
+                TodoSource.ROUTINE, false, 0);
+        entity.sourceRefId = routineId;
+        return entity;
+    }
+
+    /**
      * 부분 수정. 각 파라미터가 null이면 해당 필드는 기존 값을 그대로 둔다 — 안 보낸 필드가
      * 통째로 지워지는 걸 막기 위함(TODO-4 부분수정 버그 수정).
      */

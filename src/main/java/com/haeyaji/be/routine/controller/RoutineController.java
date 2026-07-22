@@ -2,6 +2,8 @@ package com.haeyaji.be.routine.controller;
 
 import com.haeyaji.be.common.response.ApiResponse;
 import com.haeyaji.be.common.response.SuccessCode;
+import com.haeyaji.be.routine.dto.RoutineApplyRequest;
+import com.haeyaji.be.routine.dto.RoutineApplyResponse;
 import com.haeyaji.be.routine.dto.RoutineRequest;
 import com.haeyaji.be.routine.dto.RoutineResponse;
 import com.haeyaji.be.routine.dto.RoutineUpdateRequest;
@@ -21,12 +23,13 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 /**
- * 루틴 (FR-5, ROUT-1~3).
+ * 루틴 (FR-5, ROUT-1~4).
  *
  * <pre>
  * POST   /api/routines
- * PATCH  /api/routines/{id}   제목·시간·반복요일·활성여부
+ * PATCH  /api/routines/{id}         제목·시간·반복요일·활성여부
  * DELETE /api/routines/{id}
+ * POST   /api/routines/apply        {from,to} 기간의 활성 루틴을 todo로 일괄 등록(중복 제외)
  * </pre>
  */
 @RestController
@@ -56,5 +59,11 @@ public class RoutineController {
     public ApiResponse<Void> deleteRoutine(@PathVariable UUID id) {
         routineService.deleteRoutine(id);
         return ApiResponse.of(null, SuccessCode.DELETE_SUCCESS);
+    }
+
+    @PostMapping("/apply")
+    public ApiResponse<RoutineApplyResponse> applyRoutines(@Valid @RequestBody RoutineApplyRequest request) {
+        RoutineApplyResponse result = routineService.applyRoutines(request.from(), request.to());
+        return ApiResponse.of(result, SuccessCode.POST_SUCCESS);
     }
 }

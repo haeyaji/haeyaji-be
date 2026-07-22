@@ -36,7 +36,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
         Object principal = authentication.getPrincipal();
         User user;
-        boolean isNewUser;
+        boolean isNewUser;  // 첫 로그인 사용자는 온보딩 등 할 수 있도록 추가
 
         if (principal instanceof CustomOidcUser oidcUser) {
             user = oidcUser.getUser();

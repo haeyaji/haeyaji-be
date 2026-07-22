@@ -21,12 +21,18 @@ import java.util.UUID;
 /**
  * 할 일 테이블(todo) 매핑. 비즈니스 로직은 여기 두지 않고 {@code domain.Todo}로 변환해 넘긴다.
  * id/createdAt/updatedAt은 {@link MutableBaseEntity}에서 상속.
+ * member_id는 ERD상 NN이지만, user 도메인(인증) 미구현으로 당분간 nullable로 둔다 —
+ * RoutineEntity.memberId·LabelEntity.memberId와 같은 느슨한 UUID 컬럼 방식(로그인 붙을 때 값 채움).
+ * label_id도 label 엔티티를 참조하는 느슨한 UUID 컬럼(실제 FK 연관관계 아님).
  */
 @Entity
 @Table(name = "todo")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class TodoEntity extends MutableBaseEntity {
+
+    @Column(name = "member_id")
+    private UUID memberId;
 
     @Column(nullable = false, length = 100)
     private String title;
@@ -53,6 +59,9 @@ public class TodoEntity extends MutableBaseEntity {
     @Column(length = 30)
     private String category;
 
+    @Column(name = "label_id")
+    private UUID labelId;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private TodoSource source;
@@ -70,10 +79,11 @@ public class TodoEntity extends MutableBaseEntity {
     @Column(name = "sort_order", nullable = false)
     private int sortOrder;
 
-    public static TodoEntity create(String title, LocalDate todoDate, LocalTime startTime,
-            String placeName, String placeUrl, Double lat, Double lng, String category, TodoSource source,
-            boolean pinned, int sortOrder) {
+    public static TodoEntity create(UUID memberId, String title, LocalDate todoDate, LocalTime startTime,
+            String placeName, String placeUrl, Double lat, Double lng, String category, UUID labelId,
+            TodoSource source, boolean pinned, int sortOrder) {
         TodoEntity entity = new TodoEntity();
+        entity.memberId = memberId;
         entity.title = title;
         entity.todoDate = todoDate;
         entity.startTime = startTime;
@@ -82,6 +92,7 @@ public class TodoEntity extends MutableBaseEntity {
         entity.lat = lat;
         entity.lng = lng;
         entity.category = category;
+        entity.labelId = labelId;
         entity.source = source;
         entity.status = TodoStatus.TODO;
         entity.pinned = pinned;
@@ -104,7 +115,7 @@ public class TodoEntity extends MutableBaseEntity {
      * 통째로 지워지는 걸 막기 위함(TODO-4 부분수정 버그 수정).
      */
     public void update(String title, LocalTime startTime,
-            String placeName, String placeUrl, Double lat, Double lng, String category,
+            String placeName, String placeUrl, Double lat, Double lng, String category, UUID labelId,
             Boolean pinned, Integer sortOrder) {
         if (title != null) this.title = title;
         if (startTime != null) this.startTime = startTime;
@@ -113,6 +124,7 @@ public class TodoEntity extends MutableBaseEntity {
         if (lat != null) this.lat = lat;
         if (lng != null) this.lng = lng;
         if (category != null) this.category = category;
+        if (labelId != null) this.labelId = labelId;
         if (pinned != null) this.pinned = pinned;
         if (sortOrder != null) this.sortOrder = sortOrder;
     }
@@ -130,6 +142,7 @@ public class TodoEntity extends MutableBaseEntity {
     public Todo toDomain() {
         return Todo.builder()
                 .id(getId())
+                .memberId(memberId)
                 .title(title)
                 .todoDate(todoDate)
                 .startTime(startTime)
@@ -139,6 +152,7 @@ public class TodoEntity extends MutableBaseEntity {
                 .lat(lat)
                 .lng(lng)
                 .category(category)
+                .labelId(labelId)
                 .source(source)
                 .sourceRefId(sourceRefId)
                 .status(status)

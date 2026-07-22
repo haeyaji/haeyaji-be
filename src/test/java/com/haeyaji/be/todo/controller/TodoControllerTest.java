@@ -61,7 +61,7 @@ class TodoControllerTest {
     @Test
     void 추가는_생성된_할일을_담아_반환한다() {
         TodoService service = mock(TodoService.class);
-        TodoRequest request = new TodoRequest("새일", DATE, null, null, null, null, null, null, null, null, null);
+        TodoRequest request = new TodoRequest("새일", DATE, null, null, null, null, null, null, null, null, null, null);
         when(service.createTodo(request)).thenReturn(todo("새일", TodoStatus.TODO));
         TodoController controller = new TodoController(service);
 
@@ -84,7 +84,7 @@ class TodoControllerTest {
     void 수정은_수정된_할일을_담아_반환한다() {
         TodoService service = mock(TodoService.class);
         UUID id = UUID.randomUUID();
-        TodoUpdateRequest request = new TodoUpdateRequest(null, null, null, null, null, null, null, true, null, null);
+        TodoUpdateRequest request = new TodoUpdateRequest(null, null, null, null, null, null, null, null, true, null, null);
         when(service.updateTodo(id, request)).thenReturn(todo("수정된일", TodoStatus.TODO));
         TodoController controller = new TodoController(service);
 

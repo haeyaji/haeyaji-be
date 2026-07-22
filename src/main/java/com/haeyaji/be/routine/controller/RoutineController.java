@@ -12,6 +12,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,12 +21,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
  * 루틴 (FR-5, ROUT-1~4).
  *
  * <pre>
+ * GET    /api/routines              목록 조회
+ * GET    /api/routines/{id}         단건 조회
  * POST   /api/routines
  * PATCH  /api/routines/{id}         제목·시간·반복요일·활성여부
  * DELETE /api/routines/{id}
@@ -38,6 +42,20 @@ import java.util.UUID;
 public class RoutineController {
 
     private final RoutineService routineService;
+
+    @GetMapping
+    public ApiResponse<List<RoutineResponse>> getRoutines() {
+        List<RoutineResponse> routines = routineService.getRoutines().stream()
+                .map(RoutineResponse::from)
+                .toList();
+        return ApiResponse.of(routines, SuccessCode.GET_SUCCESS);
+    }
+
+    @GetMapping("/{id}")
+    public ApiResponse<RoutineResponse> getRoutine(@PathVariable UUID id) {
+        RoutineResponse routine = RoutineResponse.from(routineService.getRoutine(id));
+        return ApiResponse.of(routine, SuccessCode.GET_SUCCESS);
+    }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)

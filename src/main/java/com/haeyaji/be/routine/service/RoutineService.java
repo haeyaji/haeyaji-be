@@ -27,6 +27,18 @@ public class RoutineService {
     private final RoutineRepository routineRepository;
     private final TodoRepository todoRepository;
 
+    public List<Routine> getRoutines() {
+        return routineRepository.findAll().stream()
+                .map(RoutineEntity::toDomain)
+                .toList();
+    }
+
+    public Routine getRoutine(UUID id) {
+        return routineRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND))
+                .toDomain();
+    }
+
     @Transactional
     public Routine createRoutine(RoutineRequest request) {
         RoutineEntity entity = RoutineEntity.create(

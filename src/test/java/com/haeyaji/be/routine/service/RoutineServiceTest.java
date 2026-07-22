@@ -35,6 +35,46 @@ import static org.mockito.Mockito.when;
 class RoutineServiceTest {
 
     @Test
+    void 목록조회는_전체_루틴을_반환한다() {
+        RoutineRepository repo = mock(RoutineRepository.class);
+        RoutineEntity a = RoutineEntity.create(null, "루틴A", null, null, Set.of(DayOfWeek.MONDAY));
+        RoutineEntity b = RoutineEntity.create(null, "루틴B", null, null, Set.of(DayOfWeek.SUNDAY));
+        when(repo.findAll()).thenReturn(List.of(a, b));
+        RoutineService service = new RoutineService(repo, mock(TodoRepository.class));
+
+        List<Routine> routines = service.getRoutines();
+
+        assertThat(routines).hasSize(2);
+        assertThat(routines).extracting(Routine::title).containsExactlyInAnyOrder("루틴A", "루틴B");
+    }
+
+    @Test
+    void 단건조회는_존재하지_않으면_예외() {
+        RoutineRepository repo = mock(RoutineRepository.class);
+        UUID id = UUID.randomUUID();
+        when(repo.findById(id)).thenReturn(Optional.empty());
+        RoutineService service = new RoutineService(repo, mock(TodoRepository.class));
+
+        assertThatThrownBy(() -> service.getRoutine(id))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.NOT_FOUND);
+    }
+
+    @Test
+    void 단건조회는_존재하면_반환한다() {
+        RoutineRepository repo = mock(RoutineRepository.class);
+        UUID id = UUID.randomUUID();
+        RoutineEntity existing = RoutineEntity.create(null, "루틴", null, null, Set.of(DayOfWeek.MONDAY));
+        when(repo.findById(id)).thenReturn(Optional.of(existing));
+        RoutineService service = new RoutineService(repo, mock(TodoRepository.class));
+
+        Routine routine = service.getRoutine(id);
+
+        assertThat(routine.title()).isEqualTo("루틴");
+    }
+
+    @Test
     void 등록하면_활성상태로_생성된다() {
         RoutineRepository repo = mock(RoutineRepository.class);
         when(repo.save(any(RoutineEntity.class))).thenAnswer(inv -> inv.getArgument(0));

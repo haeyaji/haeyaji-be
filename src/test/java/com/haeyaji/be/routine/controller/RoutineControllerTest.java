@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -37,6 +38,36 @@ class RoutineControllerTest {
                 .active(true)
                 .days(days)
                 .build();
+    }
+
+    @Test
+    void 목록조회는_전체_루틴을_반환한다() {
+        RoutineService service = mock(RoutineService.class);
+        when(service.getRoutines()).thenReturn(List.of(
+                routine("루틴A", Set.of(DayOfWeek.MONDAY)),
+                routine("루틴B", Set.of(DayOfWeek.SUNDAY))
+        ));
+        RoutineController controller = new RoutineController(service);
+
+        ApiResponse<List<RoutineResponse>> response = controller.getRoutines();
+
+        assertThat(response.success()).isTrue();
+        assertThat(response.data()).hasSize(2);
+        assertThat(response.data()).extracting(RoutineResponse::title)
+                .containsExactlyInAnyOrder("루틴A", "루틴B");
+    }
+
+    @Test
+    void 단건조회는_해당_루틴을_반환한다() {
+        RoutineService service = mock(RoutineService.class);
+        UUID id = UUID.randomUUID();
+        when(service.getRoutine(id)).thenReturn(routine("아침 운동", Set.of(DayOfWeek.MONDAY)));
+        RoutineController controller = new RoutineController(service);
+
+        ApiResponse<RoutineResponse> response = controller.getRoutine(id);
+
+        assertThat(response.success()).isTrue();
+        assertThat(response.data().title()).isEqualTo("아침 운동");
     }
 
     @Test

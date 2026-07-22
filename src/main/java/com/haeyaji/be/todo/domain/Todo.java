@@ -13,6 +13,7 @@ import java.util.UUID;
 @Builder
 public record Todo(
         UUID id,
+        UUID memberId,
         String title,
         LocalDate todoDate,
         LocalTime startTime,
@@ -22,6 +23,7 @@ public record Todo(
         Double lat,
         Double lng,
         String category,
+        UUID labelId,
         TodoSource source,
         UUID sourceRefId,
         TodoStatus status,

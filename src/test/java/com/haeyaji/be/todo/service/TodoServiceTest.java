@@ -36,16 +36,16 @@ class TodoServiceTest {
             ZonedDateTime.of(2026, 7, 22, 10, 0, 0, 0, ZONE).toInstant(), ZONE);
 
     private TodoRequest request(LocalDate date, TodoSource source, Boolean pinned, Integer sortOrder) {
-        return new TodoRequest("제목", date, null, null, null, null, null, null, source, pinned, sortOrder);
+        return new TodoRequest("제목", date, null, null, null, null, null, null, null, source, pinned, sortOrder);
     }
 
     private TodoUpdateRequest updateRequest(String title, Boolean pinned, Integer sortOrder, Boolean completed) {
-        return new TodoUpdateRequest(title, null, null, null, null, null, null, pinned, sortOrder, completed);
+        return new TodoUpdateRequest(title, null, null, null, null, null, null, null, pinned, sortOrder, completed);
     }
 
     private TodoEntity entity(String title, LocalTime startTime, String placeName, String placeUrl,
             Double lat, Double lng, String category, boolean pinned, int sortOrder) {
-        return TodoEntity.create(title, TODAY, startTime, placeName, placeUrl, lat, lng, category,
+        return TodoEntity.create(null, title, TODAY, startTime, placeName, placeUrl, lat, lng, category, null,
                 TodoSource.MANUAL, pinned, sortOrder);
     }
 
@@ -84,6 +84,34 @@ class TodoServiceTest {
         assertThat(todo.source()).isEqualTo(TodoSource.AI);
         assertThat(todo.pinned()).isTrue();
         assertThat(todo.sortOrder()).isEqualTo(5);
+    }
+
+    @Test
+    void 등록시_라벨을_지정하면_반영된다() {
+        TodoRepository repo = mock(TodoRepository.class);
+        when(repo.save(any(TodoEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+        TodoService service = new TodoService(repo, fixedClock);
+        UUID labelId = UUID.randomUUID();
+
+        Todo todo = service.createTodo(new TodoRequest("제목", TODAY, null, null, null, null, null, null,
+                labelId, null, null, null));
+
+        assertThat(todo.labelId()).isEqualTo(labelId);
+    }
+
+    @Test
+    void 수정시_라벨을_지정하면_반영된다() {
+        TodoRepository repo = mock(TodoRepository.class);
+        UUID id = UUID.randomUUID();
+        TodoEntity existing = entity("제목", null, null, null, null, null, null, false, 0);
+        when(repo.findById(id)).thenReturn(Optional.of(existing));
+        TodoService service = new TodoService(repo, fixedClock);
+        UUID labelId = UUID.randomUUID();
+
+        Todo todo = service.updateTodo(id,
+                new TodoUpdateRequest(null, null, null, null, null, null, null, labelId, null, null, null));
+
+        assertThat(todo.labelId()).isEqualTo(labelId);
     }
 
     @Test

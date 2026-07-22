@@ -41,6 +41,7 @@ public class TodoService {
         boolean pinned = request.pinned() != null ? request.pinned() : false;
         int sortOrder = request.sortOrder() != null ? request.sortOrder() : 0;
         TodoEntity entity = TodoEntity.create(
+                null,
                 request.title(),
                 request.date(),
                 request.time(),
@@ -49,6 +50,7 @@ public class TodoService {
                 request.lat(),
                 request.lng(),
                 request.category(),
+                request.labelId(),
                 source,
                 pinned,
                 sortOrder
@@ -65,7 +67,7 @@ public class TodoService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         entity.update(request.title(), request.time(),
                 request.placeName(), request.placeUrl(), request.lat(), request.lng(), request.category(),
-                request.pinned(), request.sortOrder());
+                request.labelId(), request.pinned(), request.sortOrder());
         if (request.completed() != null) {
             entity.setCompleted(request.completed(), LocalDateTime.now(clock));
         }

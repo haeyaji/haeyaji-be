@@ -29,7 +29,8 @@ public class RoutineService {
 
     @Transactional
     public Routine createRoutine(RoutineRequest request) {
-        RoutineEntity entity = RoutineEntity.create(request.title(), request.startTime(), request.days());
+        RoutineEntity entity = RoutineEntity.create(
+                null, request.title(), request.startTime(), request.labelId(), request.days());
         return routineRepository.save(entity).toDomain();
     }
 
@@ -43,7 +44,7 @@ public class RoutineService {
         }
         RoutineEntity entity = routineRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-        entity.update(request.title(), request.startTime(), request.days(), request.active());
+        entity.update(request.title(), request.startTime(), request.days(), request.active(), request.labelId());
         return entity.toDomain();
     }
 

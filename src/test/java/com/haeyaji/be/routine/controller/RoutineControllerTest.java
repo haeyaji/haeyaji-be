@@ -42,7 +42,7 @@ class RoutineControllerTest {
     @Test
     void 등록은_생성된_루틴을_담아_반환한다() {
         RoutineService service = mock(RoutineService.class);
-        RoutineRequest request = new RoutineRequest("아침 운동", LocalTime.of(7, 0), Set.of(DayOfWeek.MONDAY));
+        RoutineRequest request = new RoutineRequest("아침 운동", LocalTime.of(7, 0), Set.of(DayOfWeek.MONDAY), null);
         when(service.createRoutine(request)).thenReturn(routine("아침 운동", Set.of(DayOfWeek.MONDAY)));
         RoutineController controller = new RoutineController(service);
 
@@ -67,7 +67,7 @@ class RoutineControllerTest {
     void 수정은_수정된_루틴을_담아_반환한다() {
         RoutineService service = mock(RoutineService.class);
         UUID id = UUID.randomUUID();
-        RoutineUpdateRequest request = new RoutineUpdateRequest(null, null, null, false);
+        RoutineUpdateRequest request = new RoutineUpdateRequest(null, null, null, false, null);
         when(service.updateRoutine(id, request)).thenReturn(routine("아침 운동", Set.of(DayOfWeek.MONDAY)));
         RoutineController controller = new RoutineController(service);
 

@@ -41,7 +41,7 @@ class RoutineServiceTest {
         RoutineService service = new RoutineService(repo, mock(TodoRepository.class));
 
         Routine routine = service.createRoutine(
-                new RoutineRequest("아침 운동", LocalTime.of(7, 0), Set.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY)));
+                new RoutineRequest("아침 운동", LocalTime.of(7, 0), Set.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY), null));
 
         assertThat(routine.title()).isEqualTo("아침 운동");
         assertThat(routine.startTime()).isEqualTo(LocalTime.of(7, 0));
@@ -57,9 +57,22 @@ class RoutineServiceTest {
         RoutineService service = new RoutineService(repo, mock(TodoRepository.class));
 
         Routine routine = service.createRoutine(new RoutineRequest("출근", null,
-                Set.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY)));
+                Set.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY), null));
 
         assertThat(routine.preset()).isEqualTo(DayPreset.WEEKDAY);
+    }
+
+    @Test
+    void 등록시_라벨을_지정하면_반영된다() {
+        RoutineRepository repo = mock(RoutineRepository.class);
+        when(repo.save(any(RoutineEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+        RoutineService service = new RoutineService(repo, mock(TodoRepository.class));
+        UUID labelId = UUID.randomUUID();
+
+        Routine routine = service.createRoutine(
+                new RoutineRequest("카페 투어", null, Set.of(DayOfWeek.SATURDAY), labelId));
+
+        assertThat(routine.labelId()).isEqualTo(labelId);
     }
 
     @Test
@@ -69,17 +82,17 @@ class RoutineServiceTest {
         RoutineService service = new RoutineService(repo, mock(TodoRepository.class));
 
         Routine routine = service.createRoutine(
-                new RoutineRequest("독서", null, Set.of(DayOfWeek.SUNDAY)));
+                new RoutineRequest("독서", null, Set.of(DayOfWeek.SUNDAY), null));
 
         assertThat(routine.startTime()).isNull();
     }
 
     private RoutineEntity entity(String title, LocalTime startTime, Set<DayOfWeek> days) {
-        return RoutineEntity.create(title, startTime, days);
+        return RoutineEntity.create(null, title, startTime, null, days);
     }
 
     private RoutineUpdateRequest updateRequest(String title, LocalTime startTime, Set<DayOfWeek> days, Boolean active) {
-        return new RoutineUpdateRequest(title, startTime, days, active);
+        return new RoutineUpdateRequest(title, startTime, days, active, null);
     }
 
     @Test
@@ -146,6 +159,20 @@ class RoutineServiceTest {
 
         assertThat(routine.days()).containsExactlyInAnyOrder(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY);
         assertThat(routine.preset()).isEqualTo(DayPreset.WEEKEND);
+    }
+
+    @Test
+    void 라벨을_지정하면_반영된다() {
+        RoutineRepository repo = mock(RoutineRepository.class);
+        UUID id = UUID.randomUUID();
+        RoutineEntity existing = entity("루틴", null, Set.of(DayOfWeek.MONDAY));
+        when(repo.findById(id)).thenReturn(Optional.of(existing));
+        RoutineService service = new RoutineService(repo, mock(TodoRepository.class));
+        UUID labelId = UUID.randomUUID();
+
+        Routine routine = service.updateRoutine(id, new RoutineUpdateRequest(null, null, null, null, labelId));
+
+        assertThat(routine.labelId()).isEqualTo(labelId);
     }
 
     @Test

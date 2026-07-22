@@ -15,6 +15,7 @@ public record RoutineResponse(
         UUID id,
         String title,
         LocalTime startTime,
+        UUID labelId,
         boolean active,
         Set<DayOfWeek> days,
         DayPreset preset
@@ -25,6 +26,7 @@ public record RoutineResponse(
                 routine.id(),
                 routine.title(),
                 routine.startTime(),
+                routine.labelId(),
                 routine.active(),
                 routine.days(),
                 routine.preset()

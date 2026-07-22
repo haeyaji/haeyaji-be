@@ -14,8 +14,10 @@ import java.util.UUID;
 @Builder
 public record Routine(
         UUID id,
+        UUID memberId,
         String title,
         LocalTime startTime,
+        UUID labelId,
         boolean active,
         Set<DayOfWeek> days,
         LocalDateTime createdAt,

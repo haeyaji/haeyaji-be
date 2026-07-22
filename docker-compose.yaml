@@ -20,7 +20,7 @@ services:
       - --log-bin-trust-function-creators=1
 
     env_file:
-      - path: .env.secret
+      - path: .env
         required: false
     ports:
       - "${MYSQL_PORT:-3306}:3306"

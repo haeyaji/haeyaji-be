@@ -51,6 +51,22 @@ public class RoutineEntity extends MutableBaseEntity {
         return entity;
     }
 
+    /**
+     * 부분 수정. 각 파라미터가 null이면 해당 필드는 기존 값을 그대로 둔다 — 안 보낸 필드가
+     * 통째로 지워지는 걸 막기 위함(TodoEntity.update와 동일 패턴). days는 null이 아니면 통째로 교체.
+     */
+    public void update(String title, LocalTime startTime, Set<DayOfWeek> days, Boolean active) {
+        if (title != null) this.title = title;
+        if (startTime != null) this.startTime = startTime;
+        if (days != null) {
+            this.routineDays.clear();
+            for (DayOfWeek day : days) {
+                this.routineDays.add(new RoutineDayEntity(this, day));
+            }
+        }
+        if (active != null) this.active = active;
+    }
+
     public Routine toDomain() {
         return Routine.builder()
                 .id(getId())

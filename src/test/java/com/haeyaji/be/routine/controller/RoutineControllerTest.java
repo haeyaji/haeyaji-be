@@ -5,6 +5,7 @@ import com.haeyaji.be.routine.domain.DayPreset;
 import com.haeyaji.be.routine.domain.Routine;
 import com.haeyaji.be.routine.dto.RoutineRequest;
 import com.haeyaji.be.routine.dto.RoutineResponse;
+import com.haeyaji.be.routine.dto.RoutineUpdateRequest;
 import com.haeyaji.be.routine.service.RoutineService;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -17,6 +18,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -56,5 +58,32 @@ class RoutineControllerTest {
                 .getAnnotation(ResponseStatus.class);
 
         assertThat(status.value()).isEqualTo(HttpStatus.CREATED);
+    }
+
+    @Test
+    void 수정은_수정된_루틴을_담아_반환한다() {
+        RoutineService service = mock(RoutineService.class);
+        UUID id = UUID.randomUUID();
+        RoutineUpdateRequest request = new RoutineUpdateRequest(null, null, null, false);
+        when(service.updateRoutine(id, request)).thenReturn(routine("아침 운동", Set.of(DayOfWeek.MONDAY)));
+        RoutineController controller = new RoutineController(service);
+
+        ApiResponse<RoutineResponse> response = controller.updateRoutine(id, request);
+
+        assertThat(response.success()).isTrue();
+        assertThat(response.data().title()).isEqualTo("아침 운동");
+    }
+
+    @Test
+    void 삭제는_서비스에_위임하고_데이터없이_반환한다() {
+        RoutineService service = mock(RoutineService.class);
+        UUID id = UUID.randomUUID();
+        RoutineController controller = new RoutineController(service);
+
+        ApiResponse<Void> response = controller.deleteRoutine(id);
+
+        verify(service).deleteRoutine(id);
+        assertThat(response.success()).isTrue();
+        assertThat(response.data()).isNull();
     }
 }

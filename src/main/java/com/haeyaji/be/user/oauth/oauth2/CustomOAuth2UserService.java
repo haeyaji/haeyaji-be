@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -34,10 +35,15 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
         OAuthAttributes attrs = OAuthAttributes.of(socialType, userNameAttributeName, oAuth2User.getAttributes());
 
-        User user = userRepository.findBySocialTypeAndSocialTypeId(attrs.socialType(), attrs.socialTypeId())
+        Optional<User> optionalUser = userRepository.
+                findBySocialTypeAndSocialTypeId(attrs.socialType(), attrs.socialTypeId());
+
+        boolean newUser = optionalUser.isEmpty();
+
+        User user = optionalUser
                 .map(existingUser -> existingUser.update(attrs.name(), attrs.email()))
                 .orElseGet(() -> userRepository.save(attrs.toEntity()));
 
-        return new CustomOAuth2User(user, List.of(new SimpleGrantedAuthority(user.getRole().name())), attrs.attributes(), attrs.nameAttributeKey());
+        return new CustomOAuth2User(user, newUser, List.of(new SimpleGrantedAuthority(user.getRole().name())), attrs.attributes(), attrs.nameAttributeKey());
     }
 }

@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -40,11 +41,16 @@ public class CustomOidcUserService extends OidcUserService {
 
         OAuthAttributes attrs = OAuthAttributes.of(socialType, userNameAttributeName, oidcUser.getAttributes());
 
-        User user = userRepository.findBySocialTypeAndSocialTypeId(attrs.socialType(), attrs.socialTypeId())
+        Optional<User> optionalUser = userRepository.
+                findBySocialTypeAndSocialTypeId(attrs.socialType(), attrs.socialTypeId());
+
+        boolean newUser = optionalUser.isEmpty();
+
+        User user = optionalUser
                 .map(existingUser -> existingUser.update(attrs.name(), attrs.email()))
                 // 정보가 바뀐채로 로그인될경우 update, 컬럼이 많아지면 dto 고려. 실제로 값이 바뀌지 않았을 경우에는 update쿼리 x (dirty check)
                 .orElseGet(() -> userRepository.save(attrs.toEntity()));
 
-        return new CustomOidcUser(user, List.of(new SimpleGrantedAuthority(user.getRole().name())), oidcUser.getIdToken(), oidcUser.getUserInfo(), attrs.nameAttributeKey());
+        return new CustomOidcUser(user, newUser, List.of(new SimpleGrantedAuthority(user.getRole().name())), oidcUser.getIdToken(), oidcUser.getUserInfo(), attrs.nameAttributeKey());
     }
 }

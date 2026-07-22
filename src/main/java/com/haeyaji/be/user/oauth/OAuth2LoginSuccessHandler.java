@@ -9,11 +9,13 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -25,16 +27,23 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
     private final JwtTokenProvider jwtTokenProvider;
 
+    @Value("${app.frontend.callback-url}")
+    private String frontendCallbackUrl;
+
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication)
             throws IOException, ServletException {
 
         Object principal = authentication.getPrincipal();
         User user;
+        boolean isNewUser;
+
         if (principal instanceof CustomOidcUser oidcUser) {
             user = oidcUser.getUser();
+            isNewUser = oidcUser.isNewUser();
         } else if (principal instanceof CustomOAuth2User oauth2User) {
             user = oauth2User.getUser();
+            isNewUser = oauth2User.isNewUser();
         } else {
             throw new IllegalStateException("알 수 없는 principal 타입: " + principal.getClass());
         }
@@ -67,8 +76,14 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                 .sameSite("Lax")    // Todo: SameSite: Strict / Lax / None이 무엇인가?
                 .build();
 
+        String targetUrl = UriComponentsBuilder.fromUriString(frontendCallbackUrl)
+                .queryParam("isNewUser", isNewUser)
+                .build().toUriString();
+
         response.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString());
         response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
+
+        response.sendRedirect(targetUrl);
 
     }
 }

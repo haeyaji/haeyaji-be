@@ -3,6 +3,7 @@ package com.haeyaji.be.user.oauth;
 import com.haeyaji.be.user.domain.User;
 import com.haeyaji.be.user.domain.UserRole;
 import com.haeyaji.be.user.jwt.JwtTokenProvider;
+import com.haeyaji.be.user.jwt.RefreshTokenRepository;
 import com.haeyaji.be.user.oauth.oauth2.CustomOAuth2User;
 import com.haeyaji.be.user.oauth.oidc.CustomOidcUser;
 import jakarta.servlet.ServletException;
@@ -26,9 +27,13 @@ import java.util.UUID;
 public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     @Value("${app.frontend.callback-url}")
     private String frontendCallbackUrl;
+
+    @Value("${jwt.refresh-token-validity-ms}")
+    private long refreshTokenValidityMs;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication)
@@ -55,7 +60,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         String accessToken = jwtTokenProvider.createAccessToken(userId, userRole);
         String refreshToken = jwtTokenProvider.createRefreshToken(userId);
 
-        // Todo: refreshTokenRepository에 refresh token 저장 (TTL = jwt.refresh-token-validity-ms)
+        refreshTokenRepository.save(userId, refreshToken, Duration.ofMillis(refreshTokenValidityMs));
 
         // 클라이언트에 토큰 전달 방식: 리다이렉트+쿼리파라미터 / ** httpOnly 쿠키 ** / JSON
         ResponseCookie accessCookie = ResponseCookie.from("accessToken", accessToken)

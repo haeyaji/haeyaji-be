@@ -2,6 +2,7 @@ package com.haeyaji.be.config;
 
 import com.haeyaji.be.user.jwt.JwtAuthenticationFilter;
 import com.haeyaji.be.user.jwt.JwtTokenProvider;
+import com.haeyaji.be.user.oauth.OAuth2LoginSuccessHandler;
 import com.haeyaji.be.user.oauth.oauth2.CustomOAuth2UserService;
 import com.haeyaji.be.user.oauth.oidc.CustomOidcUserService;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ public class SecurityConfig {
     private final CustomOAuth2UserService customOAuth2UserService;
     private final CustomOidcUserService customOidcUserService;
     private final JwtTokenProvider jwtTokenProvider;
+    private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) {
@@ -38,6 +40,7 @@ public class SecurityConfig {
                                 .userService(customOAuth2UserService)   // naver
                                 .oidcUserService(customOidcUserService) // kakao/google
                         )
+                        .successHandler(oAuth2LoginSuccessHandler)
                 )
 
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class)

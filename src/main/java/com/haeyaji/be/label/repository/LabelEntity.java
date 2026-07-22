@@ -40,6 +40,14 @@ public class LabelEntity extends MutableBaseEntity {
         return entity;
     }
 
+    /**
+     * 부분 수정. 각 파라미터가 null이면 해당 필드는 기존 값을 그대로 둔다(TodoEntity.update와 동일 패턴).
+     */
+    public void update(String name, String color) {
+        if (name != null) this.name = name;
+        if (color != null) this.color = color;
+    }
+
     public Label toDomain() {
         return Label.builder()
                 .id(getId())

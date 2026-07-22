@@ -4,15 +4,18 @@ import com.haeyaji.be.common.response.ApiResponse;
 import com.haeyaji.be.label.domain.Label;
 import com.haeyaji.be.label.dto.LabelRequest;
 import com.haeyaji.be.label.dto.LabelResponse;
+import com.haeyaji.be.label.dto.LabelUpdateRequest;
 import com.haeyaji.be.label.service.LabelService;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -26,6 +29,36 @@ class LabelControllerTest {
                 .name(name)
                 .color(color)
                 .build();
+    }
+
+    @Test
+    void 목록조회는_전체_라벨을_반환한다() {
+        LabelService service = mock(LabelService.class);
+        when(service.getLabels()).thenReturn(List.of(
+                label("업무", "#FF0000"),
+                label("운동", null)
+        ));
+        LabelController controller = new LabelController(service);
+
+        ApiResponse<List<LabelResponse>> response = controller.getLabels();
+
+        assertThat(response.success()).isTrue();
+        assertThat(response.data()).hasSize(2);
+        assertThat(response.data()).extracting(LabelResponse::name)
+                .containsExactlyInAnyOrder("업무", "운동");
+    }
+
+    @Test
+    void 단건조회는_해당_라벨을_반환한다() {
+        LabelService service = mock(LabelService.class);
+        UUID id = UUID.randomUUID();
+        when(service.getLabel(id)).thenReturn(label("업무", "#FF0000"));
+        LabelController controller = new LabelController(service);
+
+        ApiResponse<LabelResponse> response = controller.getLabel(id);
+
+        assertThat(response.success()).isTrue();
+        assertThat(response.data().name()).isEqualTo("업무");
     }
 
     @Test
@@ -49,5 +82,32 @@ class LabelControllerTest {
                 .getAnnotation(ResponseStatus.class);
 
         assertThat(status.value()).isEqualTo(HttpStatus.CREATED);
+    }
+
+    @Test
+    void 수정은_수정된_라벨을_담아_반환한다() {
+        LabelService service = mock(LabelService.class);
+        UUID id = UUID.randomUUID();
+        LabelUpdateRequest request = new LabelUpdateRequest(null, "#FFFFFF");
+        when(service.updateLabel(id, request)).thenReturn(label("업무", "#FFFFFF"));
+        LabelController controller = new LabelController(service);
+
+        ApiResponse<LabelResponse> response = controller.updateLabel(id, request);
+
+        assertThat(response.success()).isTrue();
+        assertThat(response.data().color()).isEqualTo("#FFFFFF");
+    }
+
+    @Test
+    void 삭제는_서비스에_위임하고_데이터없이_반환한다() {
+        LabelService service = mock(LabelService.class);
+        UUID id = UUID.randomUUID();
+        LabelController controller = new LabelController(service);
+
+        ApiResponse<Void> response = controller.deleteLabel(id);
+
+        verify(service).deleteLabel(id);
+        assertThat(response.success()).isTrue();
+        assertThat(response.data()).isNull();
     }
 }

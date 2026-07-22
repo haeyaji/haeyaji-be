@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
+import java.util.UUID;
 
 /**
  * Access/Refresh 토큰 생성·파싱·검증 담당.
@@ -33,7 +34,7 @@ public class JwtTokenProvider {
     }
 
     // userId + role을 클레임에 담아 access token 발급
-    public String createAccessToken(Long userId, UserRole role) {
+    public String createAccessToken(UUID userId, UserRole role) {
         return Jwts.builder()
                 .subject(String.valueOf(userId))
                 .claim("role", role.name())
@@ -43,7 +44,7 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    public String createRefreshToken(Long userId) {
+    public String createRefreshToken(UUID userId) {
         return Jwts.builder()
                 .subject(String.valueOf(userId))
                 .issuedAt(new Date(System.currentTimeMillis()))
@@ -68,8 +69,8 @@ public class JwtTokenProvider {
         }
     }
 
-    public Long getUserId(String token) {
-        return Long.valueOf(parseClaims(token).getSubject());
+    public UUID getUserId(String token) {
+        return UUID.fromString(parseClaims(token).getSubject());
     }
 
     // access token에서만 유효. refresh token엔 role 클레임 없음

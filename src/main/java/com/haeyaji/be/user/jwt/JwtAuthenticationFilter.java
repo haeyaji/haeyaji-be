@@ -14,6 +14,7 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.UUID;
 
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -35,7 +36,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         // Todo: (최적화) validateToken + getUserId + getRole 3번 발생하는 토큰 파싱 1번으로 줄이기
         if (jwtTokenProvider.validateToken(token)) {
-            Long userId = jwtTokenProvider.getUserId(token);
+            UUID userId = jwtTokenProvider.getUserId(token);
             UserRole role = jwtTokenProvider.getRole(token);
 
             CustomUserDetails userDetails = new CustomUserDetails(userId, role);

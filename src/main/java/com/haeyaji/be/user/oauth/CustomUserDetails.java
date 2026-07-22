@@ -8,18 +8,19 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 public class CustomUserDetails implements UserDetails {
 
-    private final Long userId;
+    private final UUID userId;
     private final UserRole role;
 
-    public CustomUserDetails(Long userId, UserRole role) {
+    public CustomUserDetails(UUID userId, UserRole role) {
         this.userId = userId;
         this.role = role;
     }
 
-    public Long getUserId() {
+    public UUID getUserId() {
         return userId;
     }
 

@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -38,7 +39,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             throw new IllegalStateException("알 수 없는 principal 타입: " + principal.getClass());
         }
 
-        Long userId = user.getId();
+        UUID userId = user.getId();
         UserRole userRole = user.getRole();
 
         // access/refresh 토큰 발급

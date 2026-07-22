@@ -23,8 +23,10 @@ services:
 
     volumes:
       - mysql_db:/var/lib/mysql
+      - ./data/init.sql:/docker-entrypoint-initdb.d/init.sql
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
 
 volumes:
   mysql_db:
+

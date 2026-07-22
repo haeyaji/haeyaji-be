@@ -34,8 +34,9 @@ public class SecurityConfig {
 
         http
                 .csrf(csrf -> csrf
-                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
-                // Todo: CookieCsrfTokenRepository or Customizer ??
+                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                        .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()))
+                .addFilterAfter(new CsrfCookieFilter(), UsernamePasswordAuthenticationFilter.class)
 
                 .cors(Customizer.withDefaults())
 

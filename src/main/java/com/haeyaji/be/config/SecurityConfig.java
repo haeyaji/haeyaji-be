@@ -3,6 +3,8 @@ package com.haeyaji.be.config;
 import com.haeyaji.be.user.jwt.JwtAuthenticationFilter;
 import com.haeyaji.be.user.jwt.JwtTokenProvider;
 import com.haeyaji.be.user.oauth.OAuth2LoginSuccessHandler;
+import com.haeyaji.be.user.oauth.error.JwtAccessDeniedHandler;
+import com.haeyaji.be.user.oauth.error.JwtAuthenticationEntryPoint;
 import com.haeyaji.be.user.oauth.oauth2.CustomOAuth2UserService;
 import com.haeyaji.be.user.oauth.oidc.CustomOidcUserService;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +24,8 @@ public class SecurityConfig {
     private final CustomOidcUserService customOidcUserService;
     private final JwtTokenProvider jwtTokenProvider;
     private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) {
@@ -35,6 +39,11 @@ public class SecurityConfig {
 
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(jwtAuthenticationEntryPoint) // 401
+                        .accessDeniedHandler(jwtAccessDeniedHandler)           // 403
+                )
 
                 .oauth2Login(oauth2 -> oauth2
                         .userInfoEndpoint(userInfo -> userInfo

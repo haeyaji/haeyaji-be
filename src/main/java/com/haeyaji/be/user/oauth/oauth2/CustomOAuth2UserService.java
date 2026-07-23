@@ -41,7 +41,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         boolean newUser = optionalUser.isEmpty();
 
         User user = optionalUser
-                .map(existingUser -> existingUser.update(attrs.name(), attrs.email()))
+                .map(existingUser -> existingUser.update(attrs.email()))
                 .orElseGet(() -> userRepository.save(attrs.toEntity()));
 
         return new CustomOAuth2User(user, newUser, List.of(new SimpleGrantedAuthority(user.getRole().name())), attrs.attributes(), attrs.nameAttributeKey());

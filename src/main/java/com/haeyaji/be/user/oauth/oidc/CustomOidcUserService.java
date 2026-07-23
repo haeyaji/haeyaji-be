@@ -47,7 +47,7 @@ public class CustomOidcUserService extends OidcUserService {
         boolean newUser = optionalUser.isEmpty();
 
         User user = optionalUser
-                .map(existingUser -> existingUser.update(attrs.name(), attrs.email()))
+                .map(existingUser -> existingUser.update(attrs.email()))
                 // 정보가 바뀐채로 로그인될경우 update, 컬럼이 많아지면 dto 고려. 실제로 값이 바뀌지 않았을 경우에는 update쿼리 x (dirty check)
                 .orElseGet(() -> userRepository.save(attrs.toEntity()));
 

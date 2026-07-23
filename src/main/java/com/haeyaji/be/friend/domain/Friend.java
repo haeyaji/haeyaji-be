@@ -52,4 +52,11 @@ public class Friend extends ImmutableBaseEntity {
     public void reject() {
         this.status = FriendStatus.REJECTED;
     }
+
+    // 예전에 거절했던(REJECTED) row를 물리 삭제하지 않고 재사용할 때 씀 —
+    // uk_friend_pair(requester_id, receiver_id) 유니크 제약 때문에 같은 방향으로 새 row를 또 만들 수 없어서,
+    // 기존 row를 PENDING으로 되돌리는 방식으로 재요청을 허용한다.
+    public void resend() {
+        this.status = FriendStatus.PENDING;
+    }
 }

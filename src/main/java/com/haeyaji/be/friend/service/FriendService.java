@@ -44,7 +44,18 @@ public class FriendService {
             return existing;
         }
 
-        // 4) create
+        // 4) 같은 방향으로 예전에 거절된 row가 있으면(소프트 삭제 방식이라 REJECTED row가 계속 남아있음)
+        // 새로 INSERT하지 않고 그 row를 재사용해서 PENDING으로 되돌림 — 안 그러면 uk_friend_pair 유니크 제약과 충돌함
+        Optional<Friend> rejectedBefore = friendRepository
+                .findByRequesterIdAndReceiverIdAndStatus(requesterId, receiverId, FriendStatus.REJECTED);
+
+        if (rejectedBefore.isPresent()) {
+            Friend existing = rejectedBefore.get();
+            existing.resend();
+            return existing;
+        }
+
+        // 5) 그 외엔 새로 생성
         Friend friend = Friend.create(requesterId, receiverId);
 
         try {
@@ -104,8 +115,7 @@ public class FriendService {
     public List<Friend> getSentRequests(UUID memberId) {
         return friendRepository.findByRequesterIdAndStatus(memberId, FriendStatus.PENDING);
     }
-
-    // 친구 삭제
+    
     @Transactional
     public void deleteFriend(UUID friendId, UUID memberId) {
 

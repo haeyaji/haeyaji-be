@@ -55,19 +55,5 @@ public class MemberCategoryWeightEntity {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    public static MemberCategoryWeightEntity create(UUID memberId, CtxWeather ctxWeather,
-                                                    CtxTimeOfDay ctxTimeOfDay, Category category) {
-        MemberCategoryWeightEntity entity = new MemberCategoryWeightEntity();
-        entity.memberId = memberId;
-        entity.ctxWeather = ctxWeather;
-        entity.ctxTimeOfDay = ctxTimeOfDay;
-        entity.category = category;
-        entity.weight = 0;
-        return entity;
-    }
-
-    /** 신호 델타 누적(음수면 감소). decay는 별도 배치가 일괄 처리. */
-    public void addDelta(double delta) {
-        this.weight += delta;
-    }
+    // 쓰기(누적)는 repository의 원자적 UPSERT로 처리한다. 엔티티는 distill 읽기 매핑 전용.
 }

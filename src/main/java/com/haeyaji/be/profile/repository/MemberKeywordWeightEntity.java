@@ -40,15 +40,5 @@ public class MemberKeywordWeightEntity {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    public static MemberKeywordWeightEntity create(UUID memberId, String keyword) {
-        MemberKeywordWeightEntity entity = new MemberKeywordWeightEntity();
-        entity.memberId = memberId;
-        entity.keyword = keyword;
-        entity.weight = 0;
-        return entity;
-    }
-
-    public void addDelta(double delta) {
-        this.weight += delta;
-    }
+    // 쓰기(누적)는 repository의 원자적 UPSERT로 처리한다. 엔티티는 distill 읽기 매핑 전용.
 }

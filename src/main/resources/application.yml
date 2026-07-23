@@ -42,7 +42,7 @@ spring:
             redirect-uri: http://localhost:8090/api/login/oauth2/code/kakao
             client-authentication-method: client_secret_post
             authorization-grant-type: authorization_code
-            scope: openid, email
+            scope: openid, account_email
 
           naver:
             client-name: muzi-jwt-demo

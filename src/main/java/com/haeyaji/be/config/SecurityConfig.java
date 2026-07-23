@@ -63,7 +63,7 @@ public class SecurityConfig {
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class)
 
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/login/**", "/oauth2/**", "/auth/reissue", "/weather/**", "/places/**").permitAll()
+                        .requestMatchers("/", "/login/**", "/oauth2/**", "/auth/reissue", "/weather/**", "/places/**", "/message").permitAll()
                         .anyRequest().authenticated())
 
                 ;

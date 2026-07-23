@@ -59,7 +59,7 @@ public class FriendService {
     @Transactional
     public Friend acceptRequest(UUID friendId, UUID memberId) {
 
-        Friend friend = friendRepository.findByFriendId(friendId)
+        Friend friend = friendRepository.findById(friendId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.FRIEND_REQUEST_NOT_FOUND));
 
         if (!friend.getReceiverId().equals(memberId)) {
@@ -75,7 +75,7 @@ public class FriendService {
     @Transactional
     public Friend rejectRequest(UUID friendId, UUID memberId) {
 
-        Friend friend = friendRepository.findByFriendId(friendId)
+        Friend friend = friendRepository.findById(friendId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.FRIEND_REQUEST_NOT_FOUND));
 
         if (!friend.getReceiverId().equals(memberId)) {
@@ -109,7 +109,7 @@ public class FriendService {
     @Transactional
     public void deleteFriend(UUID friendId, UUID memberId) {
 
-        Friend friend = friendRepository.findByFriendId(friendId)
+        Friend friend = friendRepository.findById(friendId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.FRIEND_REQUEST_NOT_FOUND));
 
         if (!(friend.getRequesterId().equals(memberId) || friend.getReceiverId().equals(memberId))) {

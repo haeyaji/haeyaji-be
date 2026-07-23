@@ -21,7 +21,10 @@ public enum ErrorCode implements ResponseCode {
     MEMBER_NOT_FOUND(HttpStatus.BAD_REQUEST, "회원을 찾을 수 없습니다"),
 
     SELF_FRIEND_REQUEST_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "자신에게 친구 요청을 보낼 수 없습니다."),
-    ALREADY_FRIENDS(HttpStatus.BAD_REQUEST, "이미 친구로 추가된 회원입니다."),
+    ALREADY_FRIENDS(HttpStatus.CONFLICT, "이미 친구로 추가된 회원입니다."),
+    DUPLICATE_FRIEND_REQUEST(HttpStatus.CONFLICT, "이미 보낸 요청입니다."),
+    FRIEND_REQUEST_NOT_FOUND(HttpStatus.NOT_FOUND, "친구 요청을 찾을 수 없습니다."),
+    FRIEND_REQUEST_FORBIDDEN(HttpStatus.FORBIDDEN, "본인에게 온 친구 요청만 처리할 수 있습니다."),
 
     ;
 

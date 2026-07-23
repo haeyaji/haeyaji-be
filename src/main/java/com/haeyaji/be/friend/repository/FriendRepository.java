@@ -16,8 +16,6 @@ public interface FriendRepository extends JpaRepository<Friend, UUID>, CustomFri
 
     Optional<Friend> findByRequesterIdAndReceiverIdAndStatus(UUID requesterId, UUID receiverId, FriendStatus status);
 
-    Optional<Friend> findByFriendId(UUID friendId);
-
     List<Friend> findByReceiverIdAndStatus(UUID memberId, FriendStatus friendStatus);
 
     List<Friend> findByRequesterIdAndStatus(UUID memberId, FriendStatus friendStatus);

@@ -9,6 +9,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface MemberRepository extends JpaRepository<Member, UUID> {
+public interface src/main/java/com/haeyaji/be/member/domain/Member.javaMemberRepository extends JpaRepository<Member, UUID> {
     Optional<Member> findBySocialTypeAndSocialTypeId(SocialType socialType, String socialTypeId);
+
+    boolean existsByNickname(String nickname);
 }

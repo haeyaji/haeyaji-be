@@ -19,6 +19,7 @@ public enum ErrorCode implements ResponseCode {
     FORBIDDEN(HttpStatus.FORBIDDEN, "접근 권한이 없습니다."),
 
     MEMBER_NOT_FOUND(HttpStatus.BAD_REQUEST, "회원을 찾을 수 없습니다"),
+    DUPLICATE_NICKNAME(HttpStatus.CONFLICT, "이미 사용 중인 닉네임입니다."),
 
     PAST_DATE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "과거 날짜에는 할 일을 추가할 수 없습니다."),
 

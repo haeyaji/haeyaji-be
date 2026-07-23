@@ -18,9 +18,13 @@ public enum ErrorCode implements ResponseCode {
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증이 필요합니다."),
     FORBIDDEN(HttpStatus.FORBIDDEN, "접근 권한이 없습니다."),
 
-    MEMBER_NOT_FOUND(HttpStatus.BAD_REQUEST, "회원을 찾을 수 없습니다")
+    MEMBER_NOT_FOUND(HttpStatus.BAD_REQUEST, "회원을 찾을 수 없습니다"),
+
+    SELF_FRIEND_REQUEST_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "자신에게 친구 요청을 보낼 수 없습니다."),
+    ALREADY_FRIENDS(HttpStatus.BAD_REQUEST, "이미 친구로 추가된 회원입니다."),
 
     ;
+
     private final HttpStatus status;
     private final String message;
 }

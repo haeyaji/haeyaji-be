@@ -37,16 +37,16 @@ class TodoServiceTest {
             ZonedDateTime.of(2026, 7, 22, 10, 0, 0, 0, ZONE).toInstant(), ZONE);
 
     private TodoRequest request(LocalDate date, TodoSource source, Boolean pinned, Integer sortOrder) {
-        return new TodoRequest("제목", date, null, null, null, null, null, null, null, source, pinned, sortOrder);
+        return new TodoRequest("제목", date, null, null, null, null, null, null, source, pinned, sortOrder);
     }
 
     private TodoUpdateRequest updateRequest(String title, Boolean pinned, Integer sortOrder, Boolean completed) {
-        return new TodoUpdateRequest(title, null, null, null, null, null, null, null, pinned, sortOrder, completed);
+        return new TodoUpdateRequest(title, null, null, null, null, null, null, pinned, sortOrder, completed);
     }
 
     private TodoEntity entity(String title, LocalTime startTime, String placeName, String placeUrl,
-            Double lat, Double lng, String category, boolean pinned, int sortOrder) {
-        return TodoEntity.create(MEMBER_ID, title, TODAY, startTime, placeName, placeUrl, lat, lng, category, null,
+            Double lat, Double lng, boolean pinned, int sortOrder) {
+        return TodoEntity.create(MEMBER_ID, title, TODAY, startTime, placeName, placeUrl, lat, lng, null,
                 TodoSource.MANUAL, pinned, sortOrder);
     }
 
@@ -95,7 +95,7 @@ class TodoServiceTest {
         TodoService service = new TodoService(repo, fixedClock);
         UUID labelId = UUID.randomUUID();
 
-        Todo todo = service.createTodo(MEMBER_ID, new TodoRequest("제목", TODAY, null, null, null, null, null, null,
+        Todo todo = service.createTodo(MEMBER_ID, new TodoRequest("제목", TODAY, null, null, null, null, null,
                 labelId, null, null, null));
 
         assertThat(todo.labelId()).isEqualTo(labelId);
@@ -105,13 +105,13 @@ class TodoServiceTest {
     void 수정시_라벨을_지정하면_반영된다() {
         TodoRepository repo = mock(TodoRepository.class);
         UUID id = UUID.randomUUID();
-        TodoEntity existing = entity("제목", null, null, null, null, null, null, false, 0);
+        TodoEntity existing = entity("제목", null, null, null, null, null, false, 0);
         when(repo.findByIdAndMemberId(id, MEMBER_ID)).thenReturn(Optional.of(existing));
         TodoService service = new TodoService(repo, fixedClock);
         UUID labelId = UUID.randomUUID();
 
         Todo todo = service.updateTodo(MEMBER_ID, id,
-                new TodoUpdateRequest(null, null, null, null, null, null, null, labelId, null, null, null));
+                new TodoUpdateRequest(null, null, null, null, null, null, labelId, null, null, null));
 
         assertThat(todo.labelId()).isEqualTo(labelId);
     }
@@ -119,7 +119,7 @@ class TodoServiceTest {
     @Test
     void 날짜로_조회하면_저장된_할일을_반환한다() {
         TodoRepository repo = mock(TodoRepository.class);
-        TodoEntity saved = entity("제목", null, null, null, null, null, null, true, 1);
+        TodoEntity saved = entity("제목", null, null, null, null, null, true, 1);
         when(repo.findByMemberIdAndTodoDateOrderByPinnedDescSortOrderAscCreatedAtAsc(MEMBER_ID, TODAY)).thenReturn(List.of(saved));
         TodoService service = new TodoService(repo, fixedClock);
 
@@ -172,7 +172,7 @@ class TodoServiceTest {
         TodoRepository repo = mock(TodoRepository.class);
         UUID id = UUID.randomUUID();
         TodoEntity existing = entity("기존제목", LocalTime.of(9, 0), "기존장소", "http://place",
-                37.5, 127.0, "카페", false, 3);
+                37.5, 127.0, false, 3);
         when(repo.findByIdAndMemberId(id, MEMBER_ID)).thenReturn(Optional.of(existing));
         TodoService service = new TodoService(repo, fixedClock);
 
@@ -184,7 +184,6 @@ class TodoServiceTest {
         assertThat(todo.placeUrl()).isEqualTo("http://place");
         assertThat(todo.lat()).isEqualTo(37.5);
         assertThat(todo.lng()).isEqualTo(127.0);
-        assertThat(todo.category()).isEqualTo("카페");
         assertThat(todo.sortOrder()).isEqualTo(3);
         assertThat(todo.pinned()).isTrue();
     }
@@ -193,7 +192,7 @@ class TodoServiceTest {
     void 완료처리시_상태와_완료시각이_기록된다() {
         TodoRepository repo = mock(TodoRepository.class);
         UUID id = UUID.randomUUID();
-        TodoEntity existing = entity("제목", null, null, null, null, null, null, false, 0);
+        TodoEntity existing = entity("제목", null, null, null, null, null, false, 0);
         when(repo.findByIdAndMemberId(id, MEMBER_ID)).thenReturn(Optional.of(existing));
         TodoService service = new TodoService(repo, fixedClock);
 
@@ -207,7 +206,7 @@ class TodoServiceTest {
     void 완료취소시_상태와_완료시각이_초기화된다() {
         TodoRepository repo = mock(TodoRepository.class);
         UUID id = UUID.randomUUID();
-        TodoEntity existing = entity("제목", null, null, null, null, null, null, false, 0);
+        TodoEntity existing = entity("제목", null, null, null, null, null, false, 0);
         existing.setCompleted(true, LocalDateTime.now(fixedClock));
         when(repo.findByIdAndMemberId(id, MEMBER_ID)).thenReturn(Optional.of(existing));
         TodoService service = new TodoService(repo, fixedClock);
@@ -235,7 +234,7 @@ class TodoServiceTest {
     void 삭제시_존재하면_리포지토리에서_삭제된다() {
         TodoRepository repo = mock(TodoRepository.class);
         UUID id = UUID.randomUUID();
-        TodoEntity existing = entity("제목", null, null, null, null, null, null, false, 0);
+        TodoEntity existing = entity("제목", null, null, null, null, null, false, 0);
         when(repo.findByIdAndMemberId(id, MEMBER_ID)).thenReturn(Optional.of(existing));
         TodoService service = new TodoService(repo, fixedClock);
 

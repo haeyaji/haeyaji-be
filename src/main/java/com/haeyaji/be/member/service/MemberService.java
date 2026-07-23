@@ -45,4 +45,10 @@ public class MemberService {
             throw new BusinessException(ErrorCode.DUPLICATE_NICKNAME);
         }
     }
+
+    public Member searchMemberByNickname(String nickname) {
+
+        return memberRepository.findByNickname(nickname)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+    }
 }

@@ -22,7 +22,6 @@ public record Todo(
         String placeUrl,
         Double lat,
         Double lng,
-        String category,
         UUID labelId,
         TodoSource source,
         UUID sourceRefId,

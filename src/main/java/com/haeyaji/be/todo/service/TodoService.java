@@ -49,7 +49,6 @@ public class TodoService {
                 request.placeUrl(),
                 request.lat(),
                 request.lng(),
-                request.category(),
                 request.labelId(),
                 source,
                 pinned,
@@ -66,7 +65,7 @@ public class TodoService {
         TodoEntity entity = todoRepository.findByIdAndMemberId(id, memberId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         entity.update(request.title(), request.time(),
-                request.placeName(), request.placeUrl(), request.lat(), request.lng(), request.category(),
+                request.placeName(), request.placeUrl(), request.lat(), request.lng(),
                 request.labelId(), request.pinned(), request.sortOrder());
         if (request.completed() != null) {
             entity.setCompleted(request.completed(), LocalDateTime.now(clock));

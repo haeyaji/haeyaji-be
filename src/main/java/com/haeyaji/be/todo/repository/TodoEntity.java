@@ -63,9 +63,6 @@ public class TodoEntity extends MutableBaseEntity {
 
     private Double lng;
 
-    @Column(length = 30)
-    private String category;
-
     @Column(name = "label_id")
     private UUID labelId;
 
@@ -87,7 +84,7 @@ public class TodoEntity extends MutableBaseEntity {
     private int sortOrder;
 
     public static TodoEntity create(UUID memberId, String title, LocalDate todoDate, LocalTime startTime,
-            String placeName, String placeUrl, Double lat, Double lng, String category, UUID labelId,
+            String placeName, String placeUrl, Double lat, Double lng, UUID labelId,
             TodoSource source, boolean pinned, int sortOrder) {
         TodoEntity entity = new TodoEntity();
         entity.memberId = memberId;
@@ -98,7 +95,6 @@ public class TodoEntity extends MutableBaseEntity {
         entity.placeUrl = placeUrl;
         entity.lat = lat;
         entity.lng = lng;
-        entity.category = category;
         entity.labelId = labelId;
         entity.source = source;
         entity.status = TodoStatus.TODO;
@@ -106,23 +102,22 @@ public class TodoEntity extends MutableBaseEntity {
         entity.sortOrder = sortOrder;
         return entity;
     }
-    
+
     /**
      * 루틴 일괄 등록(ROUT-4)용 생성. source=ROUTINE 고정, sourceRefId로 원본 루틴을 추적한다.
      */
     public static TodoEntity createFromRoutine(UUID memberId, String title, LocalDate todoDate, LocalTime startTime, UUID routineId) {
-        TodoEntity entity = create(memberId, title, todoDate, startTime, null, null, null, null, null, null, TodoSource.ROUTINE, false, 0);
+        TodoEntity entity = create(memberId, title, todoDate, startTime, null, null, null, null, null, TodoSource.ROUTINE, false, 0);
         entity.sourceRefId = routineId;
         return entity;
     }
-
 
     /**
      * 부분 수정. 각 파라미터가 null이면 해당 필드는 기존 값을 그대로 둔다 — 안 보낸 필드가
      * 통째로 지워지는 걸 막기 위함(TODO-4 부분수정 버그 수정).
      */
     public void update(String title, LocalTime startTime,
-            String placeName, String placeUrl, Double lat, Double lng, String category, UUID labelId,
+            String placeName, String placeUrl, Double lat, Double lng, UUID labelId,
             Boolean pinned, Integer sortOrder) {
         if (title != null) this.title = title;
         if (startTime != null) this.startTime = startTime;
@@ -130,7 +125,6 @@ public class TodoEntity extends MutableBaseEntity {
         if (placeUrl != null) this.placeUrl = placeUrl;
         if (lat != null) this.lat = lat;
         if (lng != null) this.lng = lng;
-        if (category != null) this.category = category;
         if (labelId != null) this.labelId = labelId;
         if (pinned != null) this.pinned = pinned;
         if (sortOrder != null) this.sortOrder = sortOrder;
@@ -158,7 +152,6 @@ public class TodoEntity extends MutableBaseEntity {
                 .placeUrl(placeUrl)
                 .lat(lat)
                 .lng(lng)
-                .category(category)
                 .labelId(labelId)
                 .source(source)
                 .sourceRefId(sourceRefId)

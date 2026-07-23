@@ -26,8 +26,6 @@ public class User extends MutableBaseEntity {
     @Column(name = "social_type_id", nullable = false)
     private String socialTypeId;   // 소셜 타입 안에서의 고유 ID
 
-    private String nickname;
-
     @Column(name = "friend_code", nullable = false, length = 10, unique = true)
     private String friendCode;
 
@@ -45,10 +43,9 @@ public class User extends MutableBaseEntity {
     private LocalDateTime withdrawnAt;
 
     @Builder
-    private User(SocialType socialType, String socialTypeId, String nickname, String friendCode, String email, UserRole role) {
+    private User(SocialType socialType, String socialTypeId, String friendCode, String email, UserRole role) {
         this.socialType = socialType;
         this.socialTypeId = socialTypeId;
-        this.nickname = nickname;
         this.friendCode = friendCode;
         this.email = email;
         this.role = (role != null) ? role : UserRole.ROLE_USER;

@@ -16,6 +16,7 @@ import java.util.UUID;
 @Table(
         name = "member",
         uniqueConstraints = @UniqueConstraint(columnNames = {"social_type", "social_type_id"})
+
 )
 public class Member extends MutableBaseEntity {
 
@@ -27,6 +28,11 @@ public class Member extends MutableBaseEntity {
     private String socialTypeId;   // 소셜 타입 안에서의 고유 ID
 
     private String email;
+
+    // OAuth 첫 로그인 시점엔 아직 없음(온보딩에서 별도 API로 채움) → nullable 허용.
+    // unique=true여도 MySQL은 NULL끼리는 유니크 충돌로 안 봐서 온보딩 전 회원이 여럿이어도 안전함.
+    @Column(unique = true, length = 20)
+    private String nickname;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -50,6 +56,12 @@ public class Member extends MutableBaseEntity {
 
     public Member update(String email) {
         this.email = email;
+
+        return this;
+    }
+
+    public Member assignNickname(String nickname) {
+        this.nickname = nickname;
 
         return this;
     }

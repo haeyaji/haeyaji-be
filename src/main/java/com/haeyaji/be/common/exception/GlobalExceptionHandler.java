@@ -34,7 +34,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException e) {
-        ErrorCode code = e.getErrorCode();
+        ResponseCode code = e.getErrorCode();
         logByStatus(e, code, null);
 
         return ResponseEntity
@@ -167,7 +167,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     //      - 5xx (서버 결함)      → ERROR, 스택트레이스 포함 (알림 트리거 대상)
     // ======================================================================
 
-    private void logByStatus(Exception ex, ErrorCode code, @Nullable Object detail) {
+    private void logByStatus(Exception ex, ResponseCode code, @Nullable Object detail) {
         if (code.getStatus().is5xxServerError()) {
             logServerError(ex, code);
         } else {
@@ -175,7 +175,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         }
     }
 
-    private void logClientError(Exception ex, ErrorCode code, @Nullable Object detail) {
+    private void logClientError(Exception ex, ResponseCode code, @Nullable Object detail) {
         log.warn("event=CLIENT_ERROR code={} status={} exception={} detail=\"{}\" msg=\"{}\"",
                 code.name(),
                 code.getStatus().value(),
@@ -184,7 +184,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 rootCauseMessage(ex));
     }
 
-    private void logServerError(Exception ex, ErrorCode code) {
+    private void logServerError(Exception ex, ResponseCode code) {
         log.error("event=SERVER_ERROR code={} status={} exception={} msg=\"{}\"",
                 code.name(),
                 code.getStatus().value(),

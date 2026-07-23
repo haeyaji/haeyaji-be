@@ -4,7 +4,6 @@ spring:
   # 실제 키는 gitignore된 application-secret.yml 에서 로드(없으면 무시). 값은 아래 ${ENV:} 로도 주입 가능.
   config:
     import: optional:file:application-secret.yml
-
   datasource:
     url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:haeyaji_db}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useUnicode=true&allowPublicKeyRetrieval=true&useSSL=false
     username: ${MYSQL_USER:haeyaji}

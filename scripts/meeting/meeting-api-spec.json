@@ -1,0 +1,461 @@
+{
+  "domain": "meeting",
+  "title": "약속(meeting) API 명세",
+  "updatedAt": "2026-07-23",
+  "baseUrl": "http://localhost:8090/api",
+  "notes": [
+    "모든 meeting 엔드포인트는 인증 필수다. accessToken(JWT)을 Authorization: Bearer 헤더 또는 accessToken 쿠키로 전달하며, 요청 회원은 토큰의 sub(member id UUID)로 식별된다 — creatorId/memberId를 body·query로 보내지 않는다. 토큰이 없거나 무효면 401(UNAUTHORIZED).",
+    "POST/PUT/PATCH/DELETE는 CSRF 더블서브밋이 필요하다: XSRF-TOKEN 쿠키 값과 동일한 값을 X-XSRF-TOKEN 헤더에 실어 보낸다. 누락 시 403.",
+    "생성 이후 모든 접근은 shareToken 경로(/meetings/{shareToken}/...)를 사용한다. meeting의 UUID id는 참조용으로만 응답에 포함된다.",
+    "시간 구간은 모두 끝(end) 배타(exclusive)다. 예: 09:30~10:30 확정 = 09:30, 10:00 두 슬롯.",
+    "만료(EXPIRED)는 DB에 저장되지 않고 조회 시점에 판정된다(lazy). deadline이 지난 COLLECTING 약속은 조회 시 EXPIRED로 내려오고, 참여/응답/확정은 410으로 차단된다.",
+    "날짜·시각은 모두 서버 로컬(Asia/Seoul) 기준 ISO-8601. date는 'yyyy-MM-dd'. 요청의 time은 'HH:mm'과 'HH:mm:ss' 모두 허용, datetime은 'yyyy-MM-ddTHH:mm:ss'.",
+    "응답의 time은 항상 'HH:mm:ss'(예: \"09:00:00\"), datetime은 'yyyy-MM-ddTHH:mm:ss'. 단, 쓰기 직후 응답의 createdAt/joinedAt은 나노초 정밀도(예: \"...T16:40:02.493782833\")로 내려오고, 이후 재조회부터는 DB 저장 정밀도(마이크로초 또는 초 단위)로 내려온다. 파서는 소수점 초 유무를 모두 허용해야 한다.",
+    "봉투의 timestamp만 UTC Instant(예: \"2026-07-22T07:40:02.546Z\")이고, 나머지 모든 시각은 타임존 표기 없는 서버 로컬 시각이다.",
+    "아래 exampleResponse의 배열(slots, cells 등)은 지면상 앞쪽 일부만 표기했다. 실제 응답은 전체 목록을 반환한다."
+  ],
+  "commonEnvelope": {
+    "description": "모든 응답은 이 봉투로 감싸진다. success=true면 data에 성공 페이로드, false면 null 또는 검증 오류 목록.",
+    "schema": {
+      "success": "boolean",
+      "code": "string — HttpStatus 이름 (OK, CREATED, BAD_REQUEST, ...)",
+      "message": "string — 한국어 안내 메시지",
+      "data": "T | null — 성공 시 endpoints[].success.dataSchema 참조, 실패 시 null(단, bean validation 실패는 [{field, message}] 목록)",
+      "timestamp": "ISO-8601 instant (UTC)"
+    },
+    "successCodes": {
+      "description": "성공 시 code/message는 HTTP 메서드별로 고정이다.",
+      "GET": { "httpStatus": 200, "code": "OK", "message": "조회에 성공했습니다." },
+      "POST": { "httpStatus": 201, "code": "CREATED", "message": "생성에 성공했습니다." },
+      "PUT/PATCH": { "httpStatus": 200, "code": "OK", "message": "수정에 성공했습니다." }
+    },
+    "failExample": {
+      "success": false,
+      "code": "NOT_FOUND",
+      "message": "약속을 찾을 수 없습니다.",
+      "data": null,
+      "timestamp": "2026-07-22T07:40:03.048876821Z"
+    },
+    "validationFailExample": {
+      "success": false,
+      "code": "BAD_REQUEST",
+      "message": "요청 파라미터가 올바르지 않습니다.",
+      "data": [
+        { "field": "title", "message": "공백일 수 없습니다" },
+        { "field": "dates", "message": "비어 있을 수 없습니다" }
+      ],
+      "timestamp": "2026-07-22T07:42:21.325913165Z"
+    }
+  },
+  "enums": {
+    "MeetingType": ["CASUAL", "TEAM", "REGULAR", "ETC"],
+    "MeetingStatus": ["COLLECTING", "CONFIRMED", "EXPIRED"],
+    "ResponseStatus": ["FREE", "BUSY"]
+  },
+  "errorCodes": [
+    { "code": "UNAUTHORIZED", "httpStatus": 401, "message": "인증이 필요합니다. (accessToken 없음/무효 — 모든 엔드포인트 공통)" },
+    { "code": "FORBIDDEN", "httpStatus": 403, "message": "접근 권한이 없습니다. (CSRF 누락 등 — 모든 쓰기 엔드포인트 공통)" },
+    { "code": "MEETING_NOT_FOUND", "httpStatus": 404, "message": "약속을 찾을 수 없습니다." },
+    { "code": "INVALID_SLOT_UNIT", "httpStatus": 400, "message": "슬롯 단위는 30분 또는 60분만 허용됩니다." },
+    { "code": "TIME_NOT_ALIGNED", "httpStatus": 400, "message": "시작·종료 시각이 슬롯 단위 경계와 맞지 않습니다." },
+    { "code": "INVALID_TIME_RANGE", "httpStatus": 400, "message": "시작 시각과 종료 시각이 같을 수 없습니다." },
+    { "code": "DUPLICATE_CANDIDATE_DATE", "httpStatus": 400, "message": "후보 날짜가 중복되었습니다." },
+    { "code": "PAST_CANDIDATE_DATE", "httpStatus": 400, "message": "과거 날짜는 후보로 지정할 수 없습니다." },
+    { "code": "CANDIDATE_DATE_TOO_FAR", "httpStatus": 400, "message": "후보 날짜는 오늘부터 2개월 이내여야 합니다." },
+    { "code": "MEETING_EXPIRED", "httpStatus": 410, "message": "만료된 약속입니다." },
+    { "code": "MEETING_ALREADY_CONFIRMED", "httpStatus": 409, "message": "이미 확정된 약속입니다." },
+    { "code": "NOT_MEETING_CREATOR", "httpStatus": 403, "message": "약속 생성자만 확정할 수 있습니다." },
+    { "code": "NOT_MEETING_PARTICIPANT", "httpStatus": 403, "message": "약속에 먼저 참여해야 응답할 수 있습니다." },
+    { "code": "INVALID_MEETING_SLOT", "httpStatus": 400, "message": "약속에 존재하지 않는 시간 칸입니다." },
+    { "code": "INVALID_CONFIRM_RANGE", "httpStatus": 400, "message": "확정 시간 범위가 올바르지 않습니다." },
+    { "code": "INVALID_PARAMETER", "httpStatus": 400, "message": "요청 파라미터가 올바르지 않습니다. (bean validation 실패 — data에 [{field, message}] 목록)" }
+  ],
+  "schemas": {
+    "MeetingDetail": {
+      "id": { "type": "uuid" },
+      "creatorId": { "type": "uuid" },
+      "title": { "type": "string", "constraints": "1~100자" },
+      "type": { "type": "MeetingType (string)" },
+      "status": { "type": "MeetingStatus (string)", "description": "조회 시점 유효 상태(lazy 만료 반영)" },
+      "timeStart": { "type": "time", "format": "HH:mm:ss", "description": "그리드 세로축 시작" },
+      "timeEnd": { "type": "time", "format": "HH:mm:ss", "description": "그리드 세로축 끝. timeStart보다 이르면 자정 넘김(익일)" },
+      "slotUnitMinutes": { "type": "int", "constraints": "30 | 60" },
+      "deadline": { "type": "datetime | null", "description": "응답 마감. null=무제한" },
+      "confirmedStartAt": { "type": "datetime | null", "description": "확정 전 null" },
+      "confirmedEndAt": { "type": "datetime | null", "description": "배타. 확정 전 null" },
+      "shareToken": { "type": "string(43)", "description": "공유 URL 토큰" },
+      "dates": { "type": "date[]", "description": "후보 날짜(오름차순)" },
+      "slots": { "type": "TimeSlot[]", "description": "slotStartAt 오름차순" },
+      "participants": { "type": "Participant[]", "description": "joinedAt 오름차순" },
+      "createdAt": { "type": "datetime" }
+    },
+    "MeetingSummary": {
+      "id": { "type": "uuid" },
+      "title": { "type": "string" },
+      "type": { "type": "MeetingType (string)" },
+      "status": { "type": "MeetingStatus (string)" },
+      "shareToken": { "type": "string(43)" },
+      "participantCount": { "type": "long" },
+      "deadline": { "type": "datetime | null" },
+      "confirmedStartAt": { "type": "datetime | null" },
+      "confirmedEndAt": { "type": "datetime | null" },
+      "createdAt": { "type": "datetime" }
+    },
+    "TimeSlot": {
+      "id": { "type": "uuid", "description": "응답 제출(MEET-5)에서 slotId로 사용" },
+      "slotStartAt": { "type": "datetime", "description": "새벽(자정 넘김) 슬롯은 날짜+1로 정규화" }
+    },
+    "Participant": {
+      "id": { "type": "uuid", "description": "참여 행 id (memberId와 다름)" },
+      "memberId": { "type": "uuid" },
+      "joinedAt": { "type": "datetime" }
+    },
+    "SlotResponseItem": {
+      "slotId": { "type": "uuid", "description": "MeetingDetail.slots[].id" },
+      "status": { "type": "ResponseStatus (string)" }
+    },
+    "Heatmap": {
+      "participantCount": { "type": "int", "description": "전체 참여 인원(분모)" },
+      "cells": { "type": "HeatmapCell[]", "description": "슬롯당 1개, slotStartAt 오름차순. 응답이 하나도 없어도 freeCount=0으로 전 슬롯 반환" }
+    },
+    "HeatmapCell": {
+      "slotId": { "type": "uuid" },
+      "slotStartAt": { "type": "datetime" },
+      "freeCount": { "type": "int", "description": "FREE 응답 수. BUSY·미응답은 미집계" }
+    },
+    "BestTime": {
+      "maxFreeCount": { "type": "int", "description": "최대 가능 인원. 응답 없으면 0" },
+      "windows": { "type": "TimeWindow[]", "description": "동률이면 여러 개. 응답 없으면 빈 배열" }
+    },
+    "TimeWindow": {
+      "startAt": { "type": "datetime" },
+      "endAt": { "type": "datetime", "description": "배타" },
+      "freeCount": { "type": "int" }
+    },
+    "StatusBoard": {
+      "participantCount": { "type": "int" },
+      "respondedCount": { "type": "int", "description": "응답 1건 이상 제출한 참여자 수" },
+      "participants": { "type": "ParticipantAvailability[]", "description": "joinedAt 오름차순" }
+    },
+    "ParticipantAvailability": {
+      "memberId": { "type": "uuid" },
+      "joinedAt": { "type": "datetime" },
+      "responded": { "type": "boolean" },
+      "responses": { "type": "SlotResponseItem[]", "description": "slotStartAt 오름차순. 미응답이면 빈 배열" }
+    }
+  },
+  "endpoints": [
+    {
+      "id": "MEET-1/2/13/14",
+      "name": "약속 생성",
+      "method": "POST",
+      "path": "/meetings",
+      "request": {
+        "title": { "type": "string", "required": true, "constraints": "1~100자" },
+        "type": { "type": "MeetingType", "required": true },
+        "dates": { "type": "date[]", "required": true, "constraints": "1개 이상, 중복 불가, 오늘부터 2개월 뒤까지(양끝 포함)만 허용. 산발 선택 가능(월·수·금 등)" },
+        "timeStart": { "type": "time", "required": true, "constraints": "slotUnitMinutes 경계 정렬(아니면 400, 보정 없음)" },
+        "timeEnd": { "type": "time", "required": true, "constraints": "정렬 필수. timeStart와 같으면 400. timeStart보다 이르면 자정 넘김" },
+        "slotUnitMinutes": { "type": "int", "required": true, "constraints": "30 또는 60" },
+        "deadline": { "type": "datetime", "required": false, "constraints": "미래 시각. null=무제한" }
+      },
+      "success": { "httpStatus": 201, "code": "CREATED", "dataSchema": "MeetingDetail", "description": "생성자(creatorId)는 토큰의 회원이며 참여자로 자동 등록. slots는 (dates × [timeStart,timeEnd) / slotUnitMinutes)로 자동 생성. dates는 정렬되어 저장·반환" },
+      "errors": ["INVALID_SLOT_UNIT", "TIME_NOT_ALIGNED", "INVALID_TIME_RANGE", "DUPLICATE_CANDIDATE_DATE", "PAST_CANDIDATE_DATE", "CANDIDATE_DATE_TOO_FAR", "INVALID_PARAMETER"],
+      "exampleRequest": {
+        "title": "스터디 모임",
+        "type": "TEAM",
+        "dates": ["2026-07-29", "2026-07-31"],
+        "timeStart": "09:00",
+        "timeEnd": "12:00",
+        "slotUnitMinutes": 30,
+        "deadline": "2026-07-28T23:59:59"
+      },
+      "exampleResponse": {
+        "success": true,
+        "code": "CREATED",
+        "message": "생성에 성공했습니다.",
+        "data": {
+          "id": "019f88c4-6e29-7d6b-abb1-8f9b15aee2b6",
+          "creatorId": "11111111-1111-7111-8111-111111111111",
+          "title": "스터디 모임",
+          "type": "TEAM",
+          "status": "COLLECTING",
+          "timeStart": "09:00:00",
+          "timeEnd": "12:00:00",
+          "slotUnitMinutes": 30,
+          "deadline": "2026-07-28T23:59:59",
+          "confirmedStartAt": null,
+          "confirmedEndAt": null,
+          "shareToken": "OS6xe3F2elFeKciAteMpD8rCs_Rop3m9lmvhVgH9TjI",
+          "dates": ["2026-07-29", "2026-07-31"],
+          "slots": [
+            { "id": "019f88c4-6e3c-737e-9a21-0aff72bae088", "slotStartAt": "2026-07-29T09:00:00" },
+            { "id": "019f88c4-6e3c-786e-9873-85b82776c28e", "slotStartAt": "2026-07-29T09:30:00" }
+          ],
+          "participants": [
+            { "id": "019f88c4-6e3d-791e-83e5-8679ff5c0785", "memberId": "11111111-1111-7111-8111-111111111111", "joinedAt": "2026-07-22T16:40:02.493782833" }
+          ],
+          "createdAt": "2026-07-22T16:40:02.484126057"
+        },
+        "timestamp": "2026-07-22T07:40:02.546780476Z"
+      }
+    },
+    {
+      "id": "MEET-11",
+      "name": "내 약속 목록",
+      "method": "GET",
+      "path": "/meetings",
+      "success": { "httpStatus": 200, "code": "OK", "dataSchema": "MeetingSummary[]", "description": "토큰의 회원이 생성했거나 참여 중인 약속 모두 반환, createdAt 내림차순. 빈 배열 가능" },
+      "errors": ["INVALID_PARAMETER"],
+      "exampleResponse": {
+        "success": true,
+        "code": "OK",
+        "message": "조회에 성공했습니다.",
+        "data": [
+          {
+            "id": "019f88c4-6e29-7d6b-abb1-8f9b15aee2b6",
+            "title": "스터디 모임",
+            "type": "TEAM",
+            "status": "COLLECTING",
+            "shareToken": "OS6xe3F2elFeKciAteMpD8rCs_Rop3m9lmvhVgH9TjI",
+            "participantCount": 2,
+            "deadline": "2026-07-28T23:59:59",
+            "confirmedStartAt": null,
+            "confirmedEndAt": null,
+            "createdAt": "2026-07-22T16:40:02.484126"
+          },
+          {
+            "id": "019f883e-29d5-7f63-962c-a1b6ba08859c",
+            "title": "API 테스트",
+            "type": "TEAM",
+            "status": "CONFIRMED",
+            "shareToken": "ff9UMKuSfLGl_1qtXZCaqwcuR-zCrAyujzMIFPQN8r8",
+            "participantCount": 2,
+            "deadline": null,
+            "confirmedStartAt": "2026-07-29T09:30:00",
+            "confirmedEndAt": "2026-07-29T10:30:00",
+            "createdAt": "2026-07-22T14:13:23.183056"
+          }
+        ],
+        "timestamp": "2026-07-22T07:40:02.974606236Z"
+      }
+    },
+    {
+      "id": "-",
+      "name": "약속 상세 조회",
+      "method": "GET",
+      "path": "/meetings/{shareToken}",
+      "pathParams": { "shareToken": "공유 URL 토큰" },
+      "success": { "httpStatus": 200, "code": "OK", "dataSchema": "MeetingDetail" },
+      "errors": ["MEETING_NOT_FOUND"],
+      "exampleResponse": {
+        "success": true,
+        "code": "OK",
+        "message": "조회에 성공했습니다.",
+        "data": {
+          "id": "019f88c4-6e29-7d6b-abb1-8f9b15aee2b6",
+          "creatorId": "11111111-1111-7111-8111-111111111111",
+          "title": "스터디 모임",
+          "type": "TEAM",
+          "status": "COLLECTING",
+          "timeStart": "09:00:00",
+          "timeEnd": "12:00:00",
+          "slotUnitMinutes": 30,
+          "deadline": "2026-07-28T23:59:59",
+          "confirmedStartAt": null,
+          "confirmedEndAt": null,
+          "shareToken": "OS6xe3F2elFeKciAteMpD8rCs_Rop3m9lmvhVgH9TjI",
+          "dates": ["2026-07-29", "2026-07-31"],
+          "slots": [
+            { "id": "019f88c4-6e3c-737e-9a21-0aff72bae088", "slotStartAt": "2026-07-29T09:00:00" },
+            { "id": "019f88c4-6e3c-786e-9873-85b82776c28e", "slotStartAt": "2026-07-29T09:30:00" }
+          ],
+          "participants": [
+            { "id": "019f88c4-6e3d-791e-83e5-8679ff5c0785", "memberId": "11111111-1111-7111-8111-111111111111", "joinedAt": "2026-07-22T16:40:02" },
+            { "id": "019f88c4-6eb0-7ab1-a14a-9678fc875b20", "memberId": "22222222-2222-7222-8222-222222222222", "joinedAt": "2026-07-22T16:40:03" }
+          ],
+          "createdAt": "2026-07-22T16:40:02.484126"
+        },
+        "timestamp": "2026-07-22T07:40:02.798595554Z"
+      }
+    },
+    {
+      "id": "MEET-4",
+      "name": "약속 참여",
+      "method": "POST",
+      "path": "/meetings/{shareToken}/participants",
+      "request": "없음 (참여 회원은 토큰으로 식별, body 불필요)",
+      "success": { "httpStatus": 201, "code": "CREATED", "dataSchema": "Participant", "description": "이미 참여 중이면 기존 행을 그대로 반환(멱등, 항상 201)" },
+      "errors": ["MEETING_NOT_FOUND", "MEETING_EXPIRED", "MEETING_ALREADY_CONFIRMED"],
+      "exampleResponse": {
+        "success": true,
+        "code": "CREATED",
+        "message": "생성에 성공했습니다.",
+        "data": {
+          "id": "019f88c4-6eb0-7ab1-a14a-9678fc875b20",
+          "memberId": "22222222-2222-7222-8222-222222222222",
+          "joinedAt": "2026-07-22T16:40:02.608919117"
+        },
+        "timestamp": "2026-07-22T07:40:02.616703325Z"
+      }
+    },
+    {
+      "id": "MEET-5",
+      "name": "가능 시간 제출·재수정",
+      "method": "PUT",
+      "path": "/meetings/{shareToken}/responses",
+      "request": {
+        "responses": { "type": "SlotResponseItem[]", "required": true, "description": "full-replace: payload에 없는 기존 응답은 삭제됨. 빈 배열=전체 삭제. slotId 중복·타 약속 슬롯이면 400. 제출 회원은 토큰으로 식별(참여자여야 함)" }
+      },
+      "success": { "httpStatus": 200, "code": "OK", "dataSchema": "SlotResponseItem[]", "description": "저장된 본인 응답 세트(요청 순서 그대로)" },
+      "errors": ["MEETING_NOT_FOUND", "MEETING_EXPIRED", "MEETING_ALREADY_CONFIRMED", "NOT_MEETING_PARTICIPANT", "INVALID_MEETING_SLOT"],
+      "exampleRequest": {
+        "responses": [
+          { "slotId": "019f88c4-6e3c-786e-9873-85b82776c28e", "status": "FREE" },
+          { "slotId": "019f88c4-6e3c-79ec-ab36-734dc5792e3f", "status": "BUSY" }
+        ]
+      },
+      "exampleResponse": {
+        "success": true,
+        "code": "OK",
+        "message": "수정에 성공했습니다.",
+        "data": [
+          { "slotId": "019f88c4-6e3c-786e-9873-85b82776c28e", "status": "FREE" },
+          { "slotId": "019f88c4-6e3c-79ec-ab36-734dc5792e3f", "status": "BUSY" }
+        ],
+        "timestamp": "2026-07-22T07:40:02.758005131Z"
+      }
+    },
+    {
+      "id": "MEET-6",
+      "name": "히트맵 (슬롯별 가능 인원)",
+      "method": "GET",
+      "path": "/meetings/{shareToken}/heatmap",
+      "success": { "httpStatus": 200, "code": "OK", "dataSchema": "Heatmap", "description": "확정·만료 후에도 조회 가능" },
+      "errors": ["MEETING_NOT_FOUND"],
+      "exampleResponse": {
+        "success": true,
+        "code": "OK",
+        "message": "조회에 성공했습니다.",
+        "data": {
+          "participantCount": 2,
+          "cells": [
+            { "slotId": "019f88c4-6e3c-737e-9a21-0aff72bae088", "slotStartAt": "2026-07-29T09:00:00", "freeCount": 1 },
+            { "slotId": "019f88c4-6e3c-786e-9873-85b82776c28e", "slotStartAt": "2026-07-29T09:30:00", "freeCount": 2 },
+            { "slotId": "019f88c4-6e3c-79ec-ab36-734dc5792e3f", "slotStartAt": "2026-07-29T10:00:00", "freeCount": 0 }
+          ]
+        },
+        "timestamp": "2026-07-22T07:40:02.848722788Z"
+      }
+    },
+    {
+      "id": "MEET-7",
+      "name": "최적 시간 구간",
+      "method": "GET",
+      "path": "/meetings/{shareToken}/best-times",
+      "success": { "httpStatus": 200, "code": "OK", "dataSchema": "BestTime", "description": "가능 인원이 최대인 슬롯들의 최대 연속 구간 목록. 동률이면 여러 개" },
+      "errors": ["MEETING_NOT_FOUND"],
+      "exampleResponse": {
+        "success": true,
+        "code": "OK",
+        "message": "조회에 성공했습니다.",
+        "data": {
+          "maxFreeCount": 2,
+          "windows": [
+            { "startAt": "2026-07-29T09:30:00", "endAt": "2026-07-29T10:00:00", "freeCount": 2 }
+          ]
+        },
+        "timestamp": "2026-07-22T07:40:02.893917215Z"
+      }
+    },
+    {
+      "id": "MEET-8",
+      "name": "응답 현황 (참여자별)",
+      "method": "GET",
+      "path": "/meetings/{shareToken}/status",
+      "success": { "httpStatus": 200, "code": "OK", "dataSchema": "StatusBoard" },
+      "errors": ["MEETING_NOT_FOUND"],
+      "exampleResponse": {
+        "success": true,
+        "code": "OK",
+        "message": "조회에 성공했습니다.",
+        "data": {
+          "participantCount": 2,
+          "respondedCount": 2,
+          "participants": [
+            {
+              "memberId": "11111111-1111-7111-8111-111111111111",
+              "joinedAt": "2026-07-22T16:40:02",
+              "responded": true,
+              "responses": [
+                { "slotId": "019f88c4-6e3c-737e-9a21-0aff72bae088", "status": "FREE" },
+                { "slotId": "019f88c4-6e3c-786e-9873-85b82776c28e", "status": "FREE" }
+              ]
+            },
+            {
+              "memberId": "22222222-2222-7222-8222-222222222222",
+              "joinedAt": "2026-07-22T16:40:03",
+              "responded": true,
+              "responses": [
+                { "slotId": "019f88c4-6e3c-786e-9873-85b82776c28e", "status": "FREE" },
+                { "slotId": "019f88c4-6e3c-79ec-ab36-734dc5792e3f", "status": "BUSY" }
+              ]
+            }
+          ]
+        },
+        "timestamp": "2026-07-22T07:40:02.927682511Z"
+      }
+    },
+    {
+      "id": "MEET-9",
+      "name": "약속 확정 (생성자 전용)",
+      "method": "PATCH",
+      "path": "/meetings/{shareToken}/confirm",
+      "request": {
+        "confirmedStartAt": { "type": "datetime", "required": true, "constraints": "슬롯 그리드 정렬 + 실제 슬롯 범위 내. 요청 회원은 토큰으로 식별(생성자여야 함)" },
+        "confirmedEndAt": { "type": "datetime", "required": true, "constraints": "배타. start보다 커야 하고 [start,end) 구간의 모든 슬롯이 존재해야 함(연속)" }
+      },
+      "success": { "httpStatus": 200, "code": "OK", "dataSchema": "MeetingDetail", "description": "status=CONFIRMED, confirmedStartAt/confirmedEndAt 채워짐" },
+      "errors": ["MEETING_NOT_FOUND", "NOT_MEETING_CREATOR", "MEETING_ALREADY_CONFIRMED", "MEETING_EXPIRED", "INVALID_CONFIRM_RANGE"],
+      "exampleRequest": {
+        "confirmedStartAt": "2026-07-29T09:30:00",
+        "confirmedEndAt": "2026-07-29T10:30:00"
+      },
+      "exampleResponse": {
+        "success": true,
+        "code": "OK",
+        "message": "수정에 성공했습니다.",
+        "data": {
+          "id": "019f88c4-6e29-7d6b-abb1-8f9b15aee2b6",
+          "creatorId": "11111111-1111-7111-8111-111111111111",
+          "title": "스터디 모임",
+          "type": "TEAM",
+          "status": "CONFIRMED",
+          "timeStart": "09:00:00",
+          "timeEnd": "12:00:00",
+          "slotUnitMinutes": 30,
+          "deadline": "2026-07-28T23:59:59",
+          "confirmedStartAt": "2026-07-29T09:30:00",
+          "confirmedEndAt": "2026-07-29T10:30:00",
+          "shareToken": "OS6xe3F2elFeKciAteMpD8rCs_Rop3m9lmvhVgH9TjI",
+          "dates": ["2026-07-29", "2026-07-31"],
+          "slots": [
+            { "id": "019f88c4-6e3c-737e-9a21-0aff72bae088", "slotStartAt": "2026-07-29T09:00:00" },
+            { "id": "019f88c4-6e3c-786e-9873-85b82776c28e", "slotStartAt": "2026-07-29T09:30:00" }
+          ],
+          "participants": [
+            { "id": "019f88c4-6e3d-791e-83e5-8679ff5c0785", "memberId": "11111111-1111-7111-8111-111111111111", "joinedAt": "2026-07-22T16:40:02" },
+            { "id": "019f88c4-6eb0-7ab1-a14a-9678fc875b20", "memberId": "22222222-2222-7222-8222-222222222222", "joinedAt": "2026-07-22T16:40:03" }
+          ],
+          "createdAt": "2026-07-22T16:40:02.484126"
+        },
+        "timestamp": "2026-07-22T07:40:03.028031045Z"
+      }
+    }
+  ],
+  "outOfScope": [
+    { "id": "MEET-3", "reason": "공유 URL 접속 시 로그인 리다이렉트 UX — 인증 도입 및 memberId 파라미터 제거는 완료. 비로그인 사용자의 공유 URL 진입 처리(리다이렉트 정책)는 프론트와 협의 필요" },
+    { "id": "MEET-10", "reason": "확정 시 공유 할일 생성 — todo_participant(공유) 미구현으로 보류" },
+    { "id": "MEET-12(삭제)", "reason": "만료 후 차단은 구현됨. 약속 삭제 API·물리 삭제 정책은 미정" }
+  ]
+}

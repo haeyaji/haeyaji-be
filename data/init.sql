@@ -169,7 +169,7 @@ CREATE TABLE `member_category_weight`
     `member_id`       binary(16)                                                                        NOT NULL,
     `ctx_weather`     ENUM ('RAINY', 'CLEAR')                                                           NOT NULL,
     `ctx_time_of_day` ENUM ('MORNING', 'AFTERNOON', 'EVENING', 'NIGHT')                                 NOT NULL,
-    `category`        ENUM ('OUTDOOR', 'INDOOR', 'REST', 'PRODUCTIVITY', 'MEETING_PEOPLE', 'FOOD_CAFE') NOT NULL,
+    `category`        ENUM ('CAFE_DESSERT', 'RESTAURANT', 'NATURE_WALK', 'SPORTS_ACTIVITY', 'CULTURE_EXHIBIT', 'INDOOR_PLAY', 'REST_HEALING', 'STUDY_WORK', 'SOCIAL', 'SHOPPING') NOT NULL,
     `weight`          double                                                                            NOT NULL DEFAULT 0 COMMENT 'SEL+2/ADD+1/IGN-0.5(선택시점 학습, DONE 제외), 주1회 x0.9 decay',
     `updated_at`      datetime                                                                          NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`member_id`, `ctx_weather`, `ctx_time_of_day`, `category`)

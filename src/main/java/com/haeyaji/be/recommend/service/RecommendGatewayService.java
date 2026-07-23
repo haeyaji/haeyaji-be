@@ -49,8 +49,10 @@ public class RecommendGatewayService {
         }
 
         NlpMessageRequest nlpRequest = new NlpMessageRequest(
-                request.text(), request.lat(), request.lng(),
-                request.selectedCategory(), userProfile, scheduleContext);
+                request.text(), request.lat(), request.lng(), request.selectedCategory(),
+                request.weather(), request.mood(), request.timeOfDay(), request.weekday(),
+                request.radiusM(), request.history(),
+                userProfile, scheduleContext);
 
         NlpMessageResponse response = nlpClient.message(nlpRequest);
         if (response == null) {

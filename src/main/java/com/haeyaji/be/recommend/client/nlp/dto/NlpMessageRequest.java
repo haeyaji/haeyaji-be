@@ -17,6 +17,12 @@ public record NlpMessageRequest(
         double lat,
         double lng,
         Category selectedCategory,
+        String weather,
+        String mood,
+        String timeOfDay,
+        String weekday,
+        Integer radiusM,
+        List<Object> history,
         UserProfile userProfile,
         ScheduleContext scheduleContext
 ) {

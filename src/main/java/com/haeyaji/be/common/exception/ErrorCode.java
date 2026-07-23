@@ -20,6 +20,8 @@ public enum ErrorCode implements ResponseCode {
 
     MEMBER_NOT_FOUND(HttpStatus.BAD_REQUEST, "회원을 찾을 수 없습니다")
 
+    PAST_DATE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "과거 날짜에는 할 일을 추가할 수 없습니다."),
+
     ;
     private final HttpStatus status;
     private final String message;

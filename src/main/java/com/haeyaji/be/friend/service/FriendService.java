@@ -25,7 +25,7 @@ public class FriendService {
     public Friend sendRequest(UUID requesterId, UUID receiverId) {
 
         // 1) 자신에게 친구 요청 보내면 예외
-        if (requesterId == receiverId) {
+        if (requesterId.equals(receiverId)) {
             throw new BusinessException(ErrorCode.SELF_FRIEND_REQUEST_NOT_ALLOWED);
         }
 

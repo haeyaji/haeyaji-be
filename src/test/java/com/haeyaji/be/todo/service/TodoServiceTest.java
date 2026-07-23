@@ -32,6 +32,7 @@ class TodoServiceTest {
 
     private static final ZoneId ZONE = ZoneId.of("Asia/Seoul");
     private static final LocalDate TODAY = LocalDate.of(2026, 7, 22);
+    private static final UUID MEMBER_ID = UUID.randomUUID();
     private final Clock fixedClock = Clock.fixed(
             ZonedDateTime.of(2026, 7, 22, 10, 0, 0, 0, ZONE).toInstant(), ZONE);
 
@@ -45,7 +46,7 @@ class TodoServiceTest {
 
     private TodoEntity entity(String title, LocalTime startTime, String placeName, String placeUrl,
             Double lat, Double lng, String category, boolean pinned, int sortOrder) {
-        return TodoEntity.create(null, title, TODAY, startTime, placeName, placeUrl, lat, lng, category, null,
+        return TodoEntity.create(MEMBER_ID, title, TODAY, startTime, placeName, placeUrl, lat, lng, category, null,
                 TodoSource.MANUAL, pinned, sortOrder);
     }
 
@@ -54,7 +55,7 @@ class TodoServiceTest {
         TodoRepository repo = mock(TodoRepository.class);
         TodoService service = new TodoService(repo, fixedClock);
 
-        assertThatThrownBy(() -> service.createTodo(request(TODAY.minusDays(1), null, null, null)))
+        assertThatThrownBy(() -> service.createTodo(MEMBER_ID, request(TODAY.minusDays(1), null, null, null)))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.PAST_DATE_NOT_ALLOWED);
@@ -66,8 +67,9 @@ class TodoServiceTest {
         when(repo.save(any(TodoEntity.class))).thenAnswer(inv -> inv.getArgument(0));
         TodoService service = new TodoService(repo, fixedClock);
 
-        Todo todo = service.createTodo(request(TODAY, null, null, null));
+        Todo todo = service.createTodo(MEMBER_ID, request(TODAY, null, null, null));
 
+        assertThat(todo.memberId()).isEqualTo(MEMBER_ID);
         assertThat(todo.source()).isEqualTo(TodoSource.MANUAL);
         assertThat(todo.pinned()).isFalse();
         assertThat(todo.sortOrder()).isEqualTo(0);
@@ -79,7 +81,7 @@ class TodoServiceTest {
         when(repo.save(any(TodoEntity.class))).thenAnswer(inv -> inv.getArgument(0));
         TodoService service = new TodoService(repo, fixedClock);
 
-        Todo todo = service.createTodo(request(TODAY, TodoSource.AI, true, 5));
+        Todo todo = service.createTodo(MEMBER_ID, request(TODAY, TodoSource.AI, true, 5));
 
         assertThat(todo.source()).isEqualTo(TodoSource.AI);
         assertThat(todo.pinned()).isTrue();
@@ -93,7 +95,7 @@ class TodoServiceTest {
         TodoService service = new TodoService(repo, fixedClock);
         UUID labelId = UUID.randomUUID();
 
-        Todo todo = service.createTodo(new TodoRequest("제목", TODAY, null, null, null, null, null, null,
+        Todo todo = service.createTodo(MEMBER_ID, new TodoRequest("제목", TODAY, null, null, null, null, null, null,
                 labelId, null, null, null));
 
         assertThat(todo.labelId()).isEqualTo(labelId);
@@ -104,11 +106,11 @@ class TodoServiceTest {
         TodoRepository repo = mock(TodoRepository.class);
         UUID id = UUID.randomUUID();
         TodoEntity existing = entity("제목", null, null, null, null, null, null, false, 0);
-        when(repo.findById(id)).thenReturn(Optional.of(existing));
+        when(repo.findByIdAndMemberId(id, MEMBER_ID)).thenReturn(Optional.of(existing));
         TodoService service = new TodoService(repo, fixedClock);
         UUID labelId = UUID.randomUUID();
 
-        Todo todo = service.updateTodo(id,
+        Todo todo = service.updateTodo(MEMBER_ID, id,
                 new TodoUpdateRequest(null, null, null, null, null, null, null, labelId, null, null, null));
 
         assertThat(todo.labelId()).isEqualTo(labelId);
@@ -118,10 +120,10 @@ class TodoServiceTest {
     void 날짜로_조회하면_저장된_할일을_반환한다() {
         TodoRepository repo = mock(TodoRepository.class);
         TodoEntity saved = entity("제목", null, null, null, null, null, null, true, 1);
-        when(repo.findByTodoDateOrderByPinnedDescSortOrderAsc(TODAY)).thenReturn(List.of(saved));
+        when(repo.findByMemberIdAndTodoDateOrderByPinnedDescSortOrderAscCreatedAtAsc(MEMBER_ID, TODAY)).thenReturn(List.of(saved));
         TodoService service = new TodoService(repo, fixedClock);
 
-        List<Todo> todos = service.getTodosByDate(TODAY);
+        List<Todo> todos = service.getTodosByDate(MEMBER_ID, TODAY);
 
         assertThat(todos).hasSize(1);
         assertThat(todos.get(0).title()).isEqualTo("제목");
@@ -131,10 +133,24 @@ class TodoServiceTest {
     void 수정시_존재하지_않으면_예외() {
         TodoRepository repo = mock(TodoRepository.class);
         UUID id = UUID.randomUUID();
-        when(repo.findById(id)).thenReturn(Optional.empty());
+        when(repo.findByIdAndMemberId(id, MEMBER_ID)).thenReturn(Optional.empty());
         TodoService service = new TodoService(repo, fixedClock);
 
-        assertThatThrownBy(() -> service.updateTodo(id, updateRequest(null, true, null, null)))
+        assertThatThrownBy(() -> service.updateTodo(MEMBER_ID, id, updateRequest(null, true, null, null)))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.NOT_FOUND);
+    }
+
+    @Test
+    void 다른_회원의_할일을_수정하려하면_예외() {
+        TodoRepository repo = mock(TodoRepository.class);
+        UUID id = UUID.randomUUID();
+        UUID otherMemberId = UUID.randomUUID();
+        when(repo.findByIdAndMemberId(id, otherMemberId)).thenReturn(Optional.empty());
+        TodoService service = new TodoService(repo, fixedClock);
+
+        assertThatThrownBy(() -> service.updateTodo(otherMemberId, id, updateRequest(null, true, null, null)))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.NOT_FOUND);
@@ -145,7 +161,7 @@ class TodoServiceTest {
         TodoRepository repo = mock(TodoRepository.class);
         TodoService service = new TodoService(repo, fixedClock);
 
-        assertThatThrownBy(() -> service.updateTodo(UUID.randomUUID(), updateRequest("   ", null, null, null)))
+        assertThatThrownBy(() -> service.updateTodo(MEMBER_ID, UUID.randomUUID(), updateRequest("   ", null, null, null)))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.INVALID_PARAMETER);
@@ -157,10 +173,10 @@ class TodoServiceTest {
         UUID id = UUID.randomUUID();
         TodoEntity existing = entity("기존제목", LocalTime.of(9, 0), "기존장소", "http://place",
                 37.5, 127.0, "카페", false, 3);
-        when(repo.findById(id)).thenReturn(Optional.of(existing));
+        when(repo.findByIdAndMemberId(id, MEMBER_ID)).thenReturn(Optional.of(existing));
         TodoService service = new TodoService(repo, fixedClock);
 
-        Todo todo = service.updateTodo(id, updateRequest(null, true, null, null));
+        Todo todo = service.updateTodo(MEMBER_ID, id, updateRequest(null, true, null, null));
 
         assertThat(todo.title()).isEqualTo("기존제목");
         assertThat(todo.startTime()).isEqualTo(LocalTime.of(9, 0));
@@ -178,10 +194,10 @@ class TodoServiceTest {
         TodoRepository repo = mock(TodoRepository.class);
         UUID id = UUID.randomUUID();
         TodoEntity existing = entity("제목", null, null, null, null, null, null, false, 0);
-        when(repo.findById(id)).thenReturn(Optional.of(existing));
+        when(repo.findByIdAndMemberId(id, MEMBER_ID)).thenReturn(Optional.of(existing));
         TodoService service = new TodoService(repo, fixedClock);
 
-        Todo todo = service.updateTodo(id, updateRequest(null, null, null, true));
+        Todo todo = service.updateTodo(MEMBER_ID, id, updateRequest(null, null, null, true));
 
         assertThat(todo.status()).isEqualTo(TodoStatus.DONE);
         assertThat(todo.endedAt()).isEqualTo(LocalDateTime.now(fixedClock));
@@ -193,10 +209,10 @@ class TodoServiceTest {
         UUID id = UUID.randomUUID();
         TodoEntity existing = entity("제목", null, null, null, null, null, null, false, 0);
         existing.setCompleted(true, LocalDateTime.now(fixedClock));
-        when(repo.findById(id)).thenReturn(Optional.of(existing));
+        when(repo.findByIdAndMemberId(id, MEMBER_ID)).thenReturn(Optional.of(existing));
         TodoService service = new TodoService(repo, fixedClock);
 
-        Todo todo = service.updateTodo(id, updateRequest(null, null, null, false));
+        Todo todo = service.updateTodo(MEMBER_ID, id, updateRequest(null, null, null, false));
 
         assertThat(todo.status()).isEqualTo(TodoStatus.TODO);
         assertThat(todo.endedAt()).isNull();
@@ -206,10 +222,10 @@ class TodoServiceTest {
     void 삭제시_존재하지_않으면_예외() {
         TodoRepository repo = mock(TodoRepository.class);
         UUID id = UUID.randomUUID();
-        when(repo.findById(id)).thenReturn(Optional.empty());
+        when(repo.findByIdAndMemberId(id, MEMBER_ID)).thenReturn(Optional.empty());
         TodoService service = new TodoService(repo, fixedClock);
 
-        assertThatThrownBy(() -> service.deleteTodo(id))
+        assertThatThrownBy(() -> service.deleteTodo(MEMBER_ID, id))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.NOT_FOUND);
@@ -220,10 +236,10 @@ class TodoServiceTest {
         TodoRepository repo = mock(TodoRepository.class);
         UUID id = UUID.randomUUID();
         TodoEntity existing = entity("제목", null, null, null, null, null, null, false, 0);
-        when(repo.findById(id)).thenReturn(Optional.of(existing));
+        when(repo.findByIdAndMemberId(id, MEMBER_ID)).thenReturn(Optional.of(existing));
         TodoService service = new TodoService(repo, fixedClock);
 
-        service.deleteTodo(id);
+        service.deleteTodo(MEMBER_ID, id);
 
         verify(repo).delete(existing);
     }

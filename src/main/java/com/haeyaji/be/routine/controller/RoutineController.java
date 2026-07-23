@@ -2,6 +2,7 @@ package com.haeyaji.be.routine.controller;
 
 import com.haeyaji.be.common.response.ApiResponse;
 import com.haeyaji.be.common.response.SuccessCode;
+import com.haeyaji.be.member.oauth.CustomUserDetails;
 import com.haeyaji.be.routine.dto.RoutineApplyRequest;
 import com.haeyaji.be.routine.dto.RoutineApplyResponse;
 import com.haeyaji.be.routine.dto.RoutineRequest;
@@ -11,6 +12,7 @@ import com.haeyaji.be.routine.service.RoutineService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -44,44 +46,57 @@ public class RoutineController {
     private final RoutineService routineService;
 
     @GetMapping
-    public ApiResponse<List<RoutineResponse>> getRoutines() {
-        List<RoutineResponse> routines = routineService.getRoutines().stream()
+    public ApiResponse<List<RoutineResponse>> getRoutines(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        List<RoutineResponse> routines = routineService.getRoutines(userDetails.getMemberId()).stream()
                 .map(RoutineResponse::from)
                 .toList();
         return ApiResponse.of(routines, SuccessCode.GET_SUCCESS);
     }
 
     @GetMapping("/{id}")
-    public ApiResponse<RoutineResponse> getRoutine(@PathVariable UUID id) {
-        RoutineResponse routine = RoutineResponse.from(routineService.getRoutine(id));
+    public ApiResponse<RoutineResponse> getRoutine(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable UUID id
+    ) {
+        RoutineResponse routine = RoutineResponse.from(routineService.getRoutine(userDetails.getMemberId(), id));
         return ApiResponse.of(routine, SuccessCode.GET_SUCCESS);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<RoutineResponse> createRoutine(@Valid @RequestBody RoutineRequest request) {
-        RoutineResponse routine = RoutineResponse.from(routineService.createRoutine(request));
+    public ApiResponse<RoutineResponse> createRoutine(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @RequestBody RoutineRequest request
+    ) {
+        RoutineResponse routine = RoutineResponse.from(routineService.createRoutine(userDetails.getMemberId(), request));
         return ApiResponse.of(routine, SuccessCode.POST_SUCCESS);
     }
 
     @PatchMapping("/{id}")
     public ApiResponse<RoutineResponse> updateRoutine(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable UUID id,
             @Valid @RequestBody RoutineUpdateRequest request
     ) {
-        RoutineResponse routine = RoutineResponse.from(routineService.updateRoutine(id, request));
+        RoutineResponse routine = RoutineResponse.from(routineService.updateRoutine(userDetails.getMemberId(), id, request));
         return ApiResponse.of(routine, SuccessCode.PUT_SUCCESS);
     }
 
     @DeleteMapping("/{id}")
-    public ApiResponse<Void> deleteRoutine(@PathVariable UUID id) {
-        routineService.deleteRoutine(id);
+    public ApiResponse<Void> deleteRoutine(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable UUID id
+    ) {
+        routineService.deleteRoutine(userDetails.getMemberId(), id);
         return ApiResponse.of(null, SuccessCode.DELETE_SUCCESS);
     }
 
     @PostMapping("/apply")
-    public ApiResponse<RoutineApplyResponse> applyRoutines(@Valid @RequestBody RoutineApplyRequest request) {
-        RoutineApplyResponse result = routineService.applyRoutines(request.from(), request.to());
+    public ApiResponse<RoutineApplyResponse> applyRoutines(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @RequestBody RoutineApplyRequest request
+    ) {
+        RoutineApplyResponse result = routineService.applyRoutines(userDetails.getMemberId(), request.from(), request.to());
         return ApiResponse.of(result, SuccessCode.POST_SUCCESS);
     }
 }

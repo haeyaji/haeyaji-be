@@ -26,14 +26,14 @@ public class TodoService {
     private final TodoRepository todoRepository;
     private final Clock clock;
 
-    public List<Todo> getTodosByDate(LocalDate date) {
-        return todoRepository.findByTodoDateOrderByPinnedDescSortOrderAsc(date).stream()
+    public List<Todo> getTodosByDate(UUID memberId, LocalDate date) {
+        return todoRepository.findByMemberIdAndTodoDateOrderByPinnedDescSortOrderAscCreatedAtAsc(memberId, date).stream()
                 .map(TodoEntity::toDomain)
                 .toList();
     }
 
     @Transactional
-    public Todo createTodo(TodoRequest request) {
+    public Todo createTodo(UUID memberId, TodoRequest request) {
         if (request.date().isBefore(LocalDate.now(clock))) {
             throw new BusinessException(ErrorCode.PAST_DATE_NOT_ALLOWED);
         }
@@ -41,7 +41,7 @@ public class TodoService {
         boolean pinned = request.pinned() != null ? request.pinned() : false;
         int sortOrder = request.sortOrder() != null ? request.sortOrder() : 0;
         TodoEntity entity = TodoEntity.create(
-                null,
+                memberId,
                 request.title(),
                 request.date(),
                 request.time(),
@@ -59,11 +59,11 @@ public class TodoService {
     }
 
     @Transactional
-    public Todo updateTodo(UUID id, TodoUpdateRequest request) {
+    public Todo updateTodo(UUID memberId, UUID id, TodoUpdateRequest request) {
         if (request.title() != null && request.title().isBlank()) {
             throw new BusinessException(ErrorCode.INVALID_PARAMETER);
         }
-        TodoEntity entity = todoRepository.findById(id)
+        TodoEntity entity = todoRepository.findByIdAndMemberId(id, memberId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         entity.update(request.title(), request.time(),
                 request.placeName(), request.placeUrl(), request.lat(), request.lng(), request.category(),
@@ -75,8 +75,8 @@ public class TodoService {
     }
 
     @Transactional
-    public void deleteTodo(UUID id) {
-        TodoEntity entity = todoRepository.findById(id)
+    public void deleteTodo(UUID memberId, UUID id) {
+        TodoEntity entity = todoRepository.findByIdAndMemberId(id, memberId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         todoRepository.delete(entity);
     }

@@ -1,6 +1,8 @@
 package com.haeyaji.be.routine.controller;
 
 import com.haeyaji.be.common.response.ApiResponse;
+import com.haeyaji.be.member.domain.MemberRole;
+import com.haeyaji.be.member.oauth.CustomUserDetails;
 import com.haeyaji.be.routine.domain.DayPreset;
 import com.haeyaji.be.routine.domain.Routine;
 import com.haeyaji.be.routine.dto.RoutineApplyRequest;
@@ -30,6 +32,9 @@ import static org.mockito.Mockito.when;
  */
 class RoutineControllerTest {
 
+    private static final UUID MEMBER_ID = UUID.randomUUID();
+    private static final CustomUserDetails USER = new CustomUserDetails(MEMBER_ID, MemberRole.ROLE_USER);
+
     private Routine routine(String title, Set<DayOfWeek> days) {
         return Routine.builder()
                 .id(UUID.randomUUID())
@@ -41,15 +46,15 @@ class RoutineControllerTest {
     }
 
     @Test
-    void 목록조회는_전체_루틴을_반환한다() {
+    void 목록조회는_본인_루틴을_반환한다() {
         RoutineService service = mock(RoutineService.class);
-        when(service.getRoutines()).thenReturn(List.of(
+        when(service.getRoutines(MEMBER_ID)).thenReturn(List.of(
                 routine("루틴A", Set.of(DayOfWeek.MONDAY)),
                 routine("루틴B", Set.of(DayOfWeek.SUNDAY))
         ));
         RoutineController controller = new RoutineController(service);
 
-        ApiResponse<List<RoutineResponse>> response = controller.getRoutines();
+        ApiResponse<List<RoutineResponse>> response = controller.getRoutines(USER);
 
         assertThat(response.success()).isTrue();
         assertThat(response.data()).hasSize(2);
@@ -61,10 +66,10 @@ class RoutineControllerTest {
     void 단건조회는_해당_루틴을_반환한다() {
         RoutineService service = mock(RoutineService.class);
         UUID id = UUID.randomUUID();
-        when(service.getRoutine(id)).thenReturn(routine("아침 운동", Set.of(DayOfWeek.MONDAY)));
+        when(service.getRoutine(MEMBER_ID, id)).thenReturn(routine("아침 운동", Set.of(DayOfWeek.MONDAY)));
         RoutineController controller = new RoutineController(service);
 
-        ApiResponse<RoutineResponse> response = controller.getRoutine(id);
+        ApiResponse<RoutineResponse> response = controller.getRoutine(USER, id);
 
         assertThat(response.success()).isTrue();
         assertThat(response.data().title()).isEqualTo("아침 운동");
@@ -74,10 +79,10 @@ class RoutineControllerTest {
     void 등록은_생성된_루틴을_담아_반환한다() {
         RoutineService service = mock(RoutineService.class);
         RoutineRequest request = new RoutineRequest("아침 운동", LocalTime.of(7, 0), Set.of(DayOfWeek.MONDAY), null);
-        when(service.createRoutine(request)).thenReturn(routine("아침 운동", Set.of(DayOfWeek.MONDAY)));
+        when(service.createRoutine(MEMBER_ID, request)).thenReturn(routine("아침 운동", Set.of(DayOfWeek.MONDAY)));
         RoutineController controller = new RoutineController(service);
 
-        ApiResponse<RoutineResponse> response = controller.createRoutine(request);
+        ApiResponse<RoutineResponse> response = controller.createRoutine(USER, request);
 
         assertThat(response.success()).isTrue();
         assertThat(response.data().title()).isEqualTo("아침 운동");
@@ -88,7 +93,7 @@ class RoutineControllerTest {
     @Test
     void 등록은_201로_매핑된다() throws NoSuchMethodException {
         ResponseStatus status = RoutineController.class
-                .getMethod("createRoutine", RoutineRequest.class)
+                .getMethod("createRoutine", CustomUserDetails.class, RoutineRequest.class)
                 .getAnnotation(ResponseStatus.class);
 
         assertThat(status.value()).isEqualTo(HttpStatus.CREATED);
@@ -99,10 +104,10 @@ class RoutineControllerTest {
         RoutineService service = mock(RoutineService.class);
         UUID id = UUID.randomUUID();
         RoutineUpdateRequest request = new RoutineUpdateRequest(null, null, null, false, null);
-        when(service.updateRoutine(id, request)).thenReturn(routine("아침 운동", Set.of(DayOfWeek.MONDAY)));
+        when(service.updateRoutine(MEMBER_ID, id, request)).thenReturn(routine("아침 운동", Set.of(DayOfWeek.MONDAY)));
         RoutineController controller = new RoutineController(service);
 
-        ApiResponse<RoutineResponse> response = controller.updateRoutine(id, request);
+        ApiResponse<RoutineResponse> response = controller.updateRoutine(USER, id, request);
 
         assertThat(response.success()).isTrue();
         assertThat(response.data().title()).isEqualTo("아침 운동");
@@ -114,9 +119,9 @@ class RoutineControllerTest {
         UUID id = UUID.randomUUID();
         RoutineController controller = new RoutineController(service);
 
-        ApiResponse<Void> response = controller.deleteRoutine(id);
+        ApiResponse<Void> response = controller.deleteRoutine(USER, id);
 
-        verify(service).deleteRoutine(id);
+        verify(service).deleteRoutine(MEMBER_ID, id);
         assertThat(response.success()).isTrue();
         assertThat(response.data()).isNull();
     }
@@ -126,10 +131,10 @@ class RoutineControllerTest {
         RoutineService service = mock(RoutineService.class);
         RoutineApplyRequest request = new RoutineApplyRequest(
                 LocalDate.of(2026, 7, 27), LocalDate.of(2026, 8, 2));
-        when(service.applyRoutines(request.from(), request.to())).thenReturn(new RoutineApplyResponse(3));
+        when(service.applyRoutines(MEMBER_ID, request.from(), request.to())).thenReturn(new RoutineApplyResponse(3));
         RoutineController controller = new RoutineController(service);
 
-        ApiResponse<RoutineApplyResponse> response = controller.applyRoutines(request);
+        ApiResponse<RoutineApplyResponse> response = controller.applyRoutines(USER, request);
 
         assertThat(response.success()).isTrue();
         assertThat(response.data().created()).isEqualTo(3);

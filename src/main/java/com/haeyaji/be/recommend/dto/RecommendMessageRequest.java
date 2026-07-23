@@ -1,6 +1,7 @@
 package com.haeyaji.be.recommend.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.haeyaji.be.profile.domain.Category;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -17,6 +18,7 @@ public record RecommendMessageRequest(
         @NotBlank @Size(max = 500) String text,
         @NotNull Double lat,
         @NotNull Double lng,
-        String mood
+        String mood,
+        Category selectedCategory
 ) {
 }

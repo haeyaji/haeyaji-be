@@ -27,7 +27,11 @@ public class NlpClient {
 
     @Autowired
     public NlpClient(@Value("${haeyaji.nlp.base-url}") String baseUrl) {
-        this(WebClient.builder().baseUrl(baseUrl).build());
+        // 추천 응답이 여러 장소 설명을 담으면 기본 버퍼(256KB)를 넘을 수 있어 상향(AirKoreaClient와 동일).
+        this(WebClient.builder()
+                .baseUrl(baseUrl)
+                .codecs(c -> c.defaultCodecs().maxInMemorySize(2 * 1024 * 1024))
+                .build());
     }
 
     /** 테스트용: WebClient 직접 주입. */

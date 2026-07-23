@@ -10,7 +10,6 @@ import com.haeyaji.be.todo.repository.TodoEntity;
 import com.haeyaji.be.todo.repository.TodoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -29,7 +28,6 @@ import java.util.UUID;
  */
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class RecommendGatewayService {
 
     private static final DateTimeFormatter HHMM = DateTimeFormatter.ofPattern("HH:mm");
@@ -40,6 +38,9 @@ public class RecommendGatewayService {
     private final Clock clock;
 
     public NlpMessageResponse recommend(UUID memberId, RecommendMessageRequest request) {
+        // 트랜잭션을 두지 않는다: DB 조립(각 read 메서드가 자체 트랜잭션)이 끝나 커넥션이 반납된 뒤에
+        // 느린(≤20초) nlp 호출을 한다. open-in-view=false라 여기에 @Transactional을 걸면 LLM 응답 동안
+        // Hikari 커넥션을 붙잡아 풀을 고갈시킨다.
         NlpMessageRequest.UserProfile userProfile = null;
         NlpMessageRequest.ScheduleContext scheduleContext = null;
         if (memberId != null) {

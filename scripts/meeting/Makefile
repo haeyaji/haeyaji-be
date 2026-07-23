@@ -18,7 +18,7 @@ MCURL     = BASE_URL=$(BASE_URL) $(HERE)/mcurl.sh
 
 .DEFAULT_GOAL := help
 .PHONY: help build test run db-up db-down db-reset seed api-test spec token \
-        meeting-create meeting-get meeting-join meeting-heatmap \
+        meeting-create meeting-get meeting-join meeting-invite meeting-heatmap \
         meeting-best-times meeting-status meeting-list
 
 help: ## 타깃 목록 출력
@@ -79,6 +79,11 @@ meeting-get: ## 약속 상세 조회 (TOKEN=... 필수 [MEMBER=uuid], 기본 M1)
 meeting-join: ## 약속 참여 (TOKEN=... [MEMBER=uuid], 기본 M2 — 참여 회원은 토큰으로 식별)
 	@test -n "$(TOKEN)" || { echo "사용법: make meeting-join TOKEN=<shareToken> [MEMBER=uuid]"; exit 1; }
 	@$(MCURL) $(or $(MEMBER),$(M2)) POST /meetings/$(TOKEN)/participants | jq .
+
+meeting-invite: ## 약속 초대 (TOKEN=... INVITEE=uuid[,uuid...] [MEMBER=uuid], 기본 초대자 M1)
+	@test -n "$(TOKEN)" && test -n "$(INVITEE)" || { echo "사용법: make meeting-invite TOKEN=<shareToken> INVITEE=<uuid[,uuid...]>"; exit 1; }
+	@$(MCURL) $(or $(MEMBER),$(M1)) POST /meetings/$(TOKEN)/invitations \
+	  '{"memberIds":["'$$(echo '$(INVITEE)' | sed 's/,/","/g')'"]}' | jq .
 
 meeting-heatmap: ## 히트맵 조회 (TOKEN=... 필수)
 	@test -n "$(TOKEN)" || { echo "사용법: make meeting-heatmap TOKEN=<shareToken>"; exit 1; }

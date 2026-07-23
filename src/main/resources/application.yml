@@ -38,7 +38,7 @@ spring:
         registration:
           kakao:
             client-id: 1cfea2e7d45ecaf9be374cb0b78a40b1
-            client-secret: ${KAKAO_CLIENT_SECRET:mqelwi2XBpofFz5T51U7aRUuRzUj8SIV}
+            client-secret: ${KAKAO_CLIENT_SECRET}
             redirect-uri: http://localhost:8090/api/login/oauth2/code/kakao
             client-authentication-method: client_secret_post
             authorization-grant-type: authorization_code
@@ -47,14 +47,14 @@ spring:
           naver:
             client-name: muzi-jwt-demo
             client-id: L2mbZIxSFse73rysaEK4
-            client-secret: ${NAVER_CLIENT_SECRET:wlDcKU_p3S}
+            client-secret: ${NAVER_CLIENT_SECRET}
             redirect-uri: http://localhost:8090/api/login/oauth2/code/naver
             authorization-grant-type: authorization_code
             scope: email   # naver: oidc가 아니므로 openid 쓰지않는다
 
           google:
             client-id: 424369046249-b9f05jn56kdal62plkjhqmh59np77209.apps.googleusercontent.com
-            client-secret: ${GOOGLE_CLIENT_SECRET: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}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
             scope: openid, profile, email
 
         provider:
@@ -78,7 +78,7 @@ app:
     callback-url: http://localhost:3000/oauth/callback
 
 jwt:
-  secret: ${JWT_SECRET:umYvF4r3xwUfSUUMBHojtdUfhCxb/vUd4p+h6lRGCKZaw89GN5f1LhF51MEYtqrBvk3EjlDHDBGthC1eOhTQgg==}
+  secret: ${JWT_SECRET}
   access-token-validity-ms: 60000     # 1분
   refresh-token-validity-ms: 300000
 

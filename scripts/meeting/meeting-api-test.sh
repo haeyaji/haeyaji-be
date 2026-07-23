@@ -97,6 +97,16 @@ check "재참여 멱등 (같은 participant)" test "$(json '.data.id')" = "$P_ID
 req "$M1" GET "/meetings/does-not-exist"
 expect_status "없는 토큰 → 404" 404
 
+echo "== 4-1. 초대 (noti 연계) =="
+req "$M1" POST "/meetings/$TOKEN/invitations" '{"memberIds":["'$M2'","'$M3'","'$M3'"]}'
+expect_status "초대 201" 201
+check "미참여자만 초대 (M3)" test "$(json '.data.invitedMemberIds | join(",")')" = "$M3"
+check "기참여자는 스킵 (M2)" test "$(json '.data.skippedMemberIds | join(",")')" = "$M2"
+req "$M3" POST "/meetings/$TOKEN/invitations" '{"memberIds":["'$M1'"]}'
+expect_status "미참여자의 초대 → 403" 403
+req "$M1" POST "/meetings/$TOKEN/invitations" '{"memberIds":[]}'
+expect_status "빈 목록 → 400" 400
+
 echo "== 5. 시간 응답 (MEET-5) =="
 req "$M1" PUT "/meetings/$TOKEN/responses" '{"responses":[{"slotId":"'$S1'","status":"FREE"},{"slotId":"'$S2'","status":"FREE"},{"slotId":"'$S3'","status":"FREE"}]}'
 expect_status "M1 제출 200" 200
@@ -140,6 +150,8 @@ req "$M1" PATCH "/meetings/$TOKEN/confirm" '{"confirmedStartAt":"'$CONFIRM_S'","
 expect_status "재확정 → 409" 409
 req "$M2" POST "/meetings/$TOKEN/participants"
 expect_status "확정 후 참여 → 409" 409
+req "$M1" POST "/meetings/$TOKEN/invitations" '{"memberIds":["'$M3'"]}'
+expect_status "확정 후 초대 → 409" 409
 
 echo "== 9. 목록 (MEET-11) =="
 req "$M2" GET /meetings
@@ -156,6 +168,8 @@ req "$M1" GET "/meetings/$EXP_TOKEN"
 check "마감 후 조회 시 EXPIRED (lazy)" test "$(json '.data.status')" = EXPIRED
 req "$M2" POST "/meetings/$EXP_TOKEN/participants"
 expect_status "만료 후 참여 → 410" 410
+req "$M1" POST "/meetings/$EXP_TOKEN/invitations" '{"memberIds":["'$M3'"]}'
+expect_status "만료 후 초대 → 410" 410
 req "$M1" PATCH "/meetings/$EXP_TOKEN/confirm" '{"confirmedStartAt":"'${D1}'T10:00:00","confirmedEndAt":"'${D1}'T10:30:00"}'
 expect_status "만료 후 확정 → 410" 410
 

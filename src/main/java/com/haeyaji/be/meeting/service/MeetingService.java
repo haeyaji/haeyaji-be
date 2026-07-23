@@ -3,8 +3,10 @@ package com.haeyaji.be.meeting.service;
 import com.haeyaji.be.common.exception.BusinessException;
 import com.haeyaji.be.meeting.domain.CandidateDates;
 import com.haeyaji.be.meeting.domain.Meeting;
+import com.haeyaji.be.meeting.domain.MeetingConfirmedEvent;
 import com.haeyaji.be.meeting.domain.MeetingDetail;
 import com.haeyaji.be.meeting.domain.MeetingErrorCode;
+import com.haeyaji.be.meeting.domain.MeetingParticipant;
 import com.haeyaji.be.meeting.domain.MeetingSummary;
 import com.haeyaji.be.meeting.domain.ShareTokenGenerator;
 import com.haeyaji.be.meeting.domain.TimeGrid;
@@ -20,6 +22,7 @@ import com.haeyaji.be.meeting.repository.MeetingRepository;
 import com.haeyaji.be.meeting.repository.MeetingTimeSlotEntity;
 import com.haeyaji.be.meeting.repository.MeetingTimeSlotRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,6 +46,7 @@ public class MeetingService {
     private final MeetingTimeSlotRepository meetingTimeSlotRepository;
     private final MeetingParticipantRepository meetingParticipantRepository;
     private final MeetingFinder meetingFinder;
+    private final ApplicationEventPublisher eventPublisher;
     private final Clock clock;
 
     @Transactional
@@ -94,7 +98,14 @@ public class MeetingService {
         }
         validateConfirmRange(meeting, request.confirmedStartAt(), request.confirmedEndAt());
         entity.confirm(request.confirmedStartAt(), request.confirmedEndAt());
-        return loadDetail(entity);
+        MeetingDetail detail = loadDetail(entity);
+
+        // 알림(noti) 연계 지점 — 참여자 전원에게 확정 알림을 만들 수 있도록 이벤트 발행
+        eventPublisher.publishEvent(new MeetingConfirmedEvent(
+                entity.getId(), entity.getShareToken(), entity.getTitle(),
+                request.confirmedStartAt(), request.confirmedEndAt(),
+                detail.participants().stream().map(MeetingParticipant::memberId).toList()));
+        return detail;
     }
 
     /** 확정 범위 규칙: start < end, 양끝 그리드 정렬, 구간 내 모든 슬롯이 실제 후보 칸으로 존재(연속 보장). */

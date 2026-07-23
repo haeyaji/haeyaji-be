@@ -77,6 +77,10 @@ public class FriendService {
             throw new BusinessException(ErrorCode.FRIEND_REQUEST_FORBIDDEN);
         }
 
+        if (friend.getStatus() != FriendStatus.PENDING) {
+            throw new BusinessException(ErrorCode.REQUEST_ALREADY_PROCESSED);
+        }
+
         friend.accept();
 
         return friend;
@@ -91,6 +95,10 @@ public class FriendService {
 
         if (!friend.getReceiverId().equals(memberId)) {
             throw new BusinessException(ErrorCode.FRIEND_REQUEST_FORBIDDEN);
+        }
+
+        if (friend.getStatus() != FriendStatus.PENDING) {
+            throw new BusinessException(ErrorCode.REQUEST_ALREADY_PROCESSED);
         }
 
         friend.reject();

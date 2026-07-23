@@ -30,6 +30,8 @@ public enum ErrorCode implements ResponseCode {
 
     PAST_DATE_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "과거 날짜에는 할 일을 추가할 수 없습니다."),
 
+    REQUEST_ALREADY_PROCESSED(HttpStatus.BAD_REQUEST, "이미 처리된 요청입니다."),
+
     ;
 
     private final HttpStatus status;

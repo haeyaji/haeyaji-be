@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
@@ -36,6 +37,13 @@ public class User extends MutableBaseEntity {
     @Column(nullable = false)
     private UserRole role;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private UserStatus status;
+
+    @Column(name = "withdrawn_at")
+    private LocalDateTime withdrawnAt;
+
     @Builder
     private User(SocialType socialType, String socialTypeId, String nickname, String friendCode, String email, UserRole role) {
         this.socialType = socialType;
@@ -44,6 +52,7 @@ public class User extends MutableBaseEntity {
         this.friendCode = friendCode;
         this.email = email;
         this.role = (role != null) ? role : UserRole.ROLE_USER;
+        this.status = UserStatus.ACTIVE;
     }
 
     public User update(String email) {

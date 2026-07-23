@@ -1,9 +1,9 @@
-package com.haeyaji.be.user.oauth.oidc;
+package com.haeyaji.be.member.oauth.oidc;
 
-import com.haeyaji.be.user.domain.SocialType;
-import com.haeyaji.be.user.domain.User;
-import com.haeyaji.be.user.oauth.OAuthAttributes;
-import com.haeyaji.be.user.repository.UserRepository;
+import com.haeyaji.be.member.domain.SocialType;
+import com.haeyaji.be.member.domain.Member;
+import com.haeyaji.be.member.oauth.OAuthAttributes;
+import com.haeyaji.be.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
@@ -14,12 +14,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class CustomOidcUserService extends OidcUserService {
 
-    private final UserRepository userRepository;
+    private final MemberRepository memberRepository;
 
     @Override
     @Transactional
@@ -40,11 +41,16 @@ public class CustomOidcUserService extends OidcUserService {
 
         OAuthAttributes attrs = OAuthAttributes.of(socialType, userNameAttributeName, oidcUser.getAttributes());
 
-        User user = userRepository.findBySocialTypeAndSocialTypeId(attrs.socialType(), attrs.socialTypeId())
-                .map(existingUser -> existingUser.update(attrs.name(), attrs.email()))
-                // 정보가 바뀐채로 로그인될경우 update, 컬럼이 많아지면 dto 고려. 실제로 값이 바뀌지 않았을 경우에는 update쿼리 x (dirty check)
-                .orElseGet(() -> userRepository.save(attrs.toEntity()));
+        Optional<Member> optionalMember = memberRepository.
+                findBySocialTypeAndSocialTypeId(attrs.socialType(), attrs.socialTypeId());
 
-        return new CustomOidcUser(user, List.of(new SimpleGrantedAuthority(user.getRole().name())), oidcUser.getIdToken(), oidcUser.getUserInfo(), attrs.nameAttributeKey());
+        boolean isNewMember = optionalMember.isEmpty();
+
+        Member member = optionalMember
+                .map(existingMember -> existingMember.update(attrs.email()))
+                // 정보가 바뀐채로 로그인될경우 update, 컬럼이 많아지면 dto 고려. 실제로 값이 바뀌지 않았을 경우에는 update쿼리 x (dirty check)
+                .orElseGet(() -> memberRepository.save(attrs.toEntity()));
+
+        return new CustomOidcUser(member, isNewMember, List.of(new SimpleGrantedAuthority(member.getRole().name())), oidcUser.getIdToken(), oidcUser.getUserInfo(), attrs.nameAttributeKey());
     }
 }

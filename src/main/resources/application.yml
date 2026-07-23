@@ -26,6 +26,11 @@ spring:
         format_sql: true
         default_batch_fetch_size: 100
 
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
   security:
     oauth2:
       client:
@@ -36,7 +41,7 @@ spring:
             redirect-uri: http://localhost:8090/api/login/oauth2/code/kakao
             client-authentication-method: client_secret_post
             authorization-grant-type: authorization_code
-            scope: openid, profile_nickname, profile_image
+            scope: openid
 
           naver:
             client-name: muzi-jwt-demo
@@ -44,7 +49,7 @@ spring:
             client-secret: ${NAVER_CLIENT_SECRET:wlDcKU_p3S}
             redirect-uri: http://localhost:8090/api/login/oauth2/code/naver
             authorization-grant-type: authorization_code
-            scope: name,email   # naver: oidc가 아니므로 openid 쓰지않는다
+            scope: email   # naver: oidc가 아니므로 openid 쓰지않는다
 
           google:
             client-id: 424369046249-b9f05jn56kdal62plkjhqmh59np77209.apps.googleusercontent.com
@@ -64,6 +69,17 @@ spring:
             # 네이버 응답이 { response: { id, email, name } } 형태로 감싸져 있어서
             # CustomOAuth2UserService에서 response를 풀어줘야 함
             user-name-attribute: response
+
+# 임시로 생성해둠 (김현우)
+# OAuth2LoginSuccessHandler에서 sendRedirect용도
+app:
+  frontend:
+    callback-url: http://localhost:3000/oauth/callback
+
+jwt:
+  secret: ${JWT_SECRET:umYvF4r3xwUfSUUMBHojtdUfhCxb/vUd4p+h6lRGCKZaw89GN5f1LhF51MEYtqrBvk3EjlDHDBGthC1eOhTQgg==}
+  access-token-validity-ms: 60000     # 1분
+  refresh-token-validity-ms: 300000
 
 logging:
   level:

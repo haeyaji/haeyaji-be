@@ -1,4 +1,4 @@
-package com.haeyaji.be.user.domain;
+package com.haeyaji.be.member.domain;
 
 import com.haeyaji.be.common.jpa.MutableBaseEntity;
 import jakarta.persistence.*;
@@ -7,16 +7,17 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(
-        name = "users",
+        name = "member",
         uniqueConstraints = @UniqueConstraint(columnNames = {"social_type", "social_type_id"})
 )
-public class User extends MutableBaseEntity {
+public class Member extends MutableBaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "social_type", nullable = false, length = 20)
@@ -25,25 +26,29 @@ public class User extends MutableBaseEntity {
     @Column(name = "social_type_id", nullable = false)
     private String socialTypeId;   // 소셜 타입 안에서의 고유 ID
 
-    private String name;
-
     private String email;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private UserRole role;
+    private MemberRole role;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private MemberStatus status;
+
+    @Column(name = "withdrawn_at")
+    private LocalDateTime withdrawnAt;
 
     @Builder
-    private User(SocialType socialType, String socialTypeId, String name, String email, UserRole role) {
+    private Member(SocialType socialType, String socialTypeId, String email, MemberRole role) {
         this.socialType = socialType;
         this.socialTypeId = socialTypeId;
-        this.name = name;
         this.email = email;
-        this.role = (role != null) ? role : UserRole.ROLE_USER;
+        this.role = (role != null) ? role : MemberRole.ROLE_USER;
+        this.status = MemberStatus.ACTIVE;
     }
 
-    public User update(String name, String email) {
-        this.name = name;
+    public Member update(String email) {
         this.email = email;
 
         return this;

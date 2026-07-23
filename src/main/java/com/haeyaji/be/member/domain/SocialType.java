@@ -1,4 +1,4 @@
-package com.haeyaji.be.user.domain;
+package com.haeyaji.be.member.domain;
 
 public enum SocialType {
     KAKAO,

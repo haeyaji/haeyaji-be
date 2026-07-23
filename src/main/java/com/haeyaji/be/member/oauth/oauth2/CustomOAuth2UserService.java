@@ -1,9 +1,9 @@
-package com.haeyaji.be.user.oauth.oauth2;
+package com.haeyaji.be.member.oauth.oauth2;
 
-import com.haeyaji.be.user.domain.SocialType;
-import com.haeyaji.be.user.domain.User;
-import com.haeyaji.be.user.oauth.OAuthAttributes;
-import com.haeyaji.be.user.repository.UserRepository;
+import com.haeyaji.be.member.domain.SocialType;
+import com.haeyaji.be.member.domain.Member;
+import com.haeyaji.be.member.oauth.OAuthAttributes;
+import com.haeyaji.be.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
@@ -14,12 +14,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
-    private final UserRepository userRepository;
+    private final MemberRepository memberRepository;
 
     @Override
     @Transactional
@@ -34,10 +35,15 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
         OAuthAttributes attrs = OAuthAttributes.of(socialType, userNameAttributeName, oAuth2User.getAttributes());
 
-        User user = userRepository.findBySocialTypeAndSocialTypeId(attrs.socialType(), attrs.socialTypeId())
-                .map(existingUser -> existingUser.update(attrs.name(), attrs.email()))
-                .orElseGet(() -> userRepository.save(attrs.toEntity()));
+        Optional<Member> optionalMember = memberRepository.
+                findBySocialTypeAndSocialTypeId(attrs.socialType(), attrs.socialTypeId());
 
-        return new CustomOAuth2User(user, List.of(new SimpleGrantedAuthority(user.getRole().name())), attrs.attributes(), attrs.nameAttributeKey());
+        boolean isNewMember = optionalMember.isEmpty();
+
+        Member member = optionalMember
+                .map(existingMember -> existingMember.update(attrs.email()))
+                .orElseGet(() -> memberRepository.save(attrs.toEntity()));
+
+        return new CustomOAuth2User(member, isNewMember, List.of(new SimpleGrantedAuthority(member.getRole().name())), attrs.attributes(), attrs.nameAttributeKey());
     }
 }

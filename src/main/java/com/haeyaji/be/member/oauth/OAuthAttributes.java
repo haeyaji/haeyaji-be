@@ -1,8 +1,8 @@
-package com.haeyaji.be.user.oauth;
+package com.haeyaji.be.member.oauth;
 
-import com.haeyaji.be.user.domain.SocialType;
-import com.haeyaji.be.user.domain.User;
-import com.haeyaji.be.user.domain.UserRole;
+import com.haeyaji.be.member.domain.SocialType;
+import com.haeyaji.be.member.domain.Member;
+import com.haeyaji.be.member.domain.MemberRole;
 import lombok.Builder;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 
@@ -14,7 +14,6 @@ public record OAuthAttributes(
         String nameAttributeKey,          // 식별자 키 (예: "id", "sub")
         SocialType socialType,            // KAKAO | NAVER | GOOGLE
         String socialTypeId,              // 소셜 타입의 고유 ID
-        String name,
         String email
 ) {
 
@@ -32,7 +31,6 @@ public record OAuthAttributes(
                 .nameAttributeKey(userNameAttributeName)
                 .socialType(socialType)
                 .socialTypeId(String.valueOf(attributes.get(userNameAttributeName)))
-                .name((String) attributes.get("name"))
                 .email((String) attributes.get("email"))
                 .build();
     }
@@ -43,7 +41,6 @@ public record OAuthAttributes(
                 .nameAttributeKey(userNameAttributeName)
                 .socialType(socialType)
                 .socialTypeId(String.valueOf(attributes.get(userNameAttributeName)))
-                .name((String) attributes.get("nickname"))
                 .email((String) attributes.get("email"))
                 .build();
     }
@@ -63,18 +60,16 @@ public record OAuthAttributes(
                 .nameAttributeKey(userNameAttributeName)
                 .socialType(socialType)
                 .socialTypeId(String.valueOf(response.get(userNameAttributeName)))
-                .name((String) response.get("nickname"))
                 .email((String) response.get("email"))
                 .build();
     }
 
-    public User toEntity() {
-        return User.builder()
+    public Member toEntity() {
+        return Member.builder()
                 .socialType(socialType)
                 .socialTypeId(socialTypeId)
-                .name(name)
                 .email(email)
-                .role(UserRole.ROLE_USER)
+                .role(MemberRole.ROLE_USER)
                 .build();
     }
 }

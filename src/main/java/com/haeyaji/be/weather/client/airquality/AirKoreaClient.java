@@ -207,7 +207,9 @@ public class AirKoreaClient {
                     .uri(uri -> params.apply(uri.path(path).queryParam("serviceKey", serviceKey)).build())
                     .retrieve()
                     .bodyToMono(String.class)
-                    .timeout(Duration.ofSeconds(8))
+                    // 전국 실측(getCtprvnRltmMesureDnsty)은 ~355KB라 응답이 ~9초 걸려 8초로는 상시 타임아웃.
+                    // 60분 캐시라 호출이 드무므로 15초로 여유를 준다(측정소 목록은 0.24초라 영향 없음).
+                    .timeout(Duration.ofSeconds(15))
                     .block();
             JsonNode items = objectMapper.readTree(body).path("response").path("body").path("items");
             return items.isArray() ? items : null;

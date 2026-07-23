@@ -1,12 +1,12 @@
 package com.haeyaji.be.config;
 
-import com.haeyaji.be.user.jwt.JwtAuthenticationFilter;
-import com.haeyaji.be.user.jwt.JwtTokenProvider;
-import com.haeyaji.be.user.oauth.OAuth2LoginSuccessHandler;
-import com.haeyaji.be.user.oauth.error.JwtAccessDeniedHandler;
-import com.haeyaji.be.user.oauth.error.JwtAuthenticationEntryPoint;
-import com.haeyaji.be.user.oauth.oauth2.CustomOAuth2UserService;
-import com.haeyaji.be.user.oauth.oidc.CustomOidcUserService;
+import com.haeyaji.be.member.jwt.JwtAuthenticationFilter;
+import com.haeyaji.be.member.jwt.JwtTokenProvider;
+import com.haeyaji.be.member.oauth.OAuth2LoginSuccessHandler;
+import com.haeyaji.be.member.oauth.error.JwtAccessDeniedHandler;
+import com.haeyaji.be.member.oauth.error.JwtAuthenticationEntryPoint;
+import com.haeyaji.be.member.oauth.oauth2.CustomOAuth2UserService;
+import com.haeyaji.be.member.oauth.oidc.CustomOidcUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

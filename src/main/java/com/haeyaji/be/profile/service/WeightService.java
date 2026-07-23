@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.nio.ByteBuffer;
 import java.time.Clock;
 import java.time.LocalTime;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -34,6 +35,28 @@ public class WeightService {
     private final MemberCategoryWeightRepository categoryWeightRepository;
     private final MemberKeywordWeightRepository keywordWeightRepository;
     private final Clock clock;
+
+    /**
+     * 카테고리 선택 결과를 한 번에 학습. nlp 카테고리 후보에서 하나 고른 순간 fe가 호출.
+     * <p>고른 것 {@link Signal#SELECTED}(+2), 같이 떴는데 안 고른 것 {@link Signal#NOT_SELECTED}(−0.05),
+     * 세부 키워드(있으면) SELECTED(+2). {@code selected}가 {@code shown}에 없으면 shown에 편입해 처리한다.
+     */
+    @Transactional
+    public void applyChoice(UUID memberId, List<Category> shown, Category selected, List<String> keywords) {
+        applyCategorySignal(memberId, selected, Signal.SELECTED);
+        if (shown != null) {
+            for (Category c : shown) {
+                if (c != null && c != selected) {
+                    applyCategorySignal(memberId, c, Signal.NOT_SELECTED);
+                }
+            }
+        }
+        if (keywords != null) {
+            for (String kw : keywords) {
+                applyKeywordSignal(memberId, kw, Signal.SELECTED);
+            }
+        }
+    }
 
     /** 카테고리 신호 원자적 누적. 없으면 delta로 생성, 있으면 += delta. */
     @Transactional

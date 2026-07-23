@@ -17,6 +17,8 @@ public interface MeetingParticipantRepository extends JpaRepository<MeetingParti
 
     List<MeetingParticipantEntity> findByMeetingIdOrderByJoinedAt(UUID meetingId);
 
+    List<MeetingParticipantEntity> findByMeetingIdAndMemberIdIn(UUID meetingId, Collection<UUID> memberIds);
+
     long countByMeetingId(UUID meetingId);
 
     /** 목록 조회용 약속별 참여 인원 수. */

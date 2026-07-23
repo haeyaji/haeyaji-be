@@ -7,6 +7,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -31,6 +32,10 @@ import java.util.stream.Collectors;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class RoutineEntity extends MutableBaseEntity {
+
+    /** 낙관적 락(N9). */
+    @Version
+    private Long version;
 
     @Column(name = "member_id")
     private UUID memberId;
@@ -65,15 +70,23 @@ public class RoutineEntity extends MutableBaseEntity {
 
     /**
      * 부분 수정. 각 파라미터가 null이면 해당 필드는 기존 값을 그대로 둔다 — 안 보낸 필드가
-     * 통째로 지워지는 걸 막기 위함(TodoEntity.update와 동일 패턴). days는 null이 아니면 통째로 교체.
+     * 통째로 지워지는 걸 막기 위함(TodoEntity.update와 동일 패턴).
+     * days는 null이 아니면 교체하되, clear+전체재생성 대신 실제로 바뀐 요일만 삭제/추가한다 —
+     * 안 바뀐 요일까지 지웠다 다시 넣으면 insert가 delete보다 먼저 플러시되면서
+     * uk_routine_day(routine_id, day_of_week) 유니크 제약과 충돌해 500이 났었다(RoutineDayEntity 참고).
      */
     public void update(String title, LocalTime startTime, Set<DayOfWeek> days, Boolean active, UUID labelId) {
         if (title != null) this.title = title;
         if (startTime != null) this.startTime = startTime;
         if (days != null) {
-            this.routineDays.clear();
+            this.routineDays.removeIf(routineDay -> !days.contains(routineDay.getDayOfWeek()));
+            Set<DayOfWeek> existingDays = this.routineDays.stream()
+                    .map(RoutineDayEntity::getDayOfWeek)
+                    .collect(Collectors.toSet());
             for (DayOfWeek day : days) {
-                this.routineDays.add(new RoutineDayEntity(this, day));
+                if (!existingDays.contains(day)) {
+                    this.routineDays.add(new RoutineDayEntity(this, day));
+                }
             }
         }
         if (active != null) this.active = active;

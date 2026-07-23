@@ -9,6 +9,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -26,10 +28,15 @@ import java.util.UUID;
  * label_id도 label 엔티티를 참조하는 느슨한 UUID 컬럼(실제 FK 연관관계 아님).
  */
 @Entity
-@Table(name = "todo")
+@Table(name = "todo", uniqueConstraints = @UniqueConstraint(
+        name = "uk_todo_routine_dedup", columnNames = {"todo_date", "source", "source_ref_id"}))
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class TodoEntity extends MutableBaseEntity {
+
+    /** 낙관적 락(N9) — 동시에 같은 row를 수정할 때 나중 쓰기가 먼저 쓴 걸 조용히 덮어쓰는 걸 막는다. */
+    @Version
+    private Long version;
 
     @Column(name = "member_id")
     private UUID memberId;
@@ -99,16 +106,16 @@ public class TodoEntity extends MutableBaseEntity {
         entity.sortOrder = sortOrder;
         return entity;
     }
-
+    
     /**
      * 루틴 일괄 등록(ROUT-4)용 생성. source=ROUTINE 고정, sourceRefId로 원본 루틴을 추적한다.
      */
-    public static TodoEntity createFromRoutine(String title, LocalDate todoDate, LocalTime startTime, UUID routineId) {
-        TodoEntity entity = create(title, todoDate, startTime, null, null, null, null, null,
-                TodoSource.ROUTINE, false, 0);
+    public static TodoEntity createFromRoutine(UUID memberId, String title, LocalDate todoDate, LocalTime startTime, UUID routineId) {
+        TodoEntity entity = create(memberId, title, todoDate, startTime, null, null, null, null, null, null, TodoSource.ROUTINE, false, 0);
         entity.sourceRefId = routineId;
         return entity;
     }
+
 
     /**
      * 부분 수정. 각 파라미터가 null이면 해당 필드는 기존 값을 그대로 둔다 — 안 보낸 필드가

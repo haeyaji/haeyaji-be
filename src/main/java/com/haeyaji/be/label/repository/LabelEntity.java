@@ -5,6 +5,7 @@ import com.haeyaji.be.label.domain.Label;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -22,6 +23,10 @@ import java.util.UUID;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class LabelEntity extends MutableBaseEntity {
+
+    /** 낙관적 락(N9). */
+    @Version
+    private Long version;
 
     @Column(name = "member_id")
     private UUID memberId;

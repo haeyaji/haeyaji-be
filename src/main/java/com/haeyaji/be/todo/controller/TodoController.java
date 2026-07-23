@@ -2,6 +2,7 @@ package com.haeyaji.be.todo.controller;
 
 import com.haeyaji.be.common.response.ApiResponse;
 import com.haeyaji.be.common.response.SuccessCode;
+import com.haeyaji.be.member.oauth.CustomUserDetails;
 import com.haeyaji.be.todo.dto.TodoListResponse;
 import com.haeyaji.be.todo.dto.TodoRequest;
 import com.haeyaji.be.todo.dto.TodoResponse;
@@ -11,6 +12,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -44,10 +46,11 @@ public class TodoController {
 
     @GetMapping
     public ApiResponse<TodoListResponse> getTodos(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
     ) {
-        var tasks = todoService.getTodosByDate(date).stream()
+        var tasks = todoService.getTodosByDate(userDetails.getMemberId(), date).stream()
                 .map(TodoResponse::from)
                 .toList();
         return ApiResponse.of(TodoListResponse.from(tasks), SuccessCode.GET_SUCCESS);
@@ -55,23 +58,30 @@ public class TodoController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<TodoResponse> createTodo(@Valid @RequestBody TodoRequest request) {
-        TodoResponse todo = TodoResponse.from(todoService.createTodo(request));
+    public ApiResponse<TodoResponse> createTodo(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @RequestBody TodoRequest request
+    ) {
+        TodoResponse todo = TodoResponse.from(todoService.createTodo(userDetails.getMemberId(), request));
         return ApiResponse.of(todo, SuccessCode.POST_SUCCESS);
     }
 
     @PatchMapping("/{id}")
     public ApiResponse<TodoResponse> updateTodo(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable UUID id,
             @Valid @RequestBody TodoUpdateRequest request
     ) {
-        TodoResponse todo = TodoResponse.from(todoService.updateTodo(id, request));
+        TodoResponse todo = TodoResponse.from(todoService.updateTodo(userDetails.getMemberId(), id, request));
         return ApiResponse.of(todo, SuccessCode.PUT_SUCCESS);
     }
 
     @DeleteMapping("/{id}")
-    public ApiResponse<Void> deleteTodo(@PathVariable UUID id) {
-        todoService.deleteTodo(id);
+    public ApiResponse<Void> deleteTodo(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable UUID id
+    ) {
+        todoService.deleteTodo(userDetails.getMemberId(), id);
         return ApiResponse.of(null, SuccessCode.DELETE_SUCCESS);
     }
 }

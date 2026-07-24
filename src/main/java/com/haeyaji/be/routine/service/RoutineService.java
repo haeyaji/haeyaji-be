@@ -31,6 +31,7 @@ public class RoutineService {
 
     private final RoutineRepository routineRepository;
     private final TodoRepository todoRepository;
+    private final RoutineTodoWriter routineTodoWriter;
 
     public List<Routine> getRoutines(UUID memberId) {
         return routineRepository.findAllByMemberId(memberId).stream()
@@ -123,6 +124,10 @@ public class RoutineService {
      * (uk_todo_routine_dedup)을 추가해뒀으니, save 시점에 그 레이스가 실제로 발생하면
      * DataIntegrityViolationException으로 걸러지고 이 건만 건너뛴다 — exists 사전 체크는
      * 정상 경로에서 불필요한 제약 위반 예외를 피하기 위한 최적화로 그대로 둔다.
+     * 실제 저장은 {@link RoutineTodoWriter}가 건별 별도 트랜잭션(REQUIRES_NEW)으로 격리해서
+     * 처리하고, 그 실패(예외)는 여기(호출자, 별개의 세션)까지 그대로 전파시켜서 여기서 catch한다(H1) —
+     * catch를 REQUIRES_NEW 메서드 안에 두면 그 메서드 자신의 커밋 시점에 여전히
+     * UnexpectedRollbackException이 터지므로, 반드시 그 트랜잭션 밖에서 잡아야 한다.
      */
     private int applyRoutine(RoutineEntity routine, LocalDate from, LocalDate to) {
         var days = routine.toDomain().days();
@@ -139,7 +144,7 @@ public class RoutineService {
             TodoEntity todo = TodoEntity.createFromRoutine(
                     routine.getMemberId(), routine.getTitle(), date, routine.getStartTime(), routine.getId());
             try {
-                todoRepository.saveAndFlush(todo);
+                routineTodoWriter.save(todo);
                 created++;
             } catch (DataIntegrityViolationException e) {
                 // 동시 요청이 먼저 같은 (date, ROUTINE, routineId) todo를 만든 경우 — 건너뛴다.

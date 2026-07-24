@@ -42,7 +42,7 @@ class RoutineServiceTest {
         RoutineEntity a = RoutineEntity.create(MEMBER_ID, "루틴A", null, null, Set.of(DayOfWeek.MONDAY));
         RoutineEntity b = RoutineEntity.create(MEMBER_ID, "루틴B", null, null, Set.of(DayOfWeek.SUNDAY));
         when(repo.findAllByMemberId(MEMBER_ID)).thenReturn(List.of(a, b));
-        RoutineService service = new RoutineService(repo, mock(TodoRepository.class));
+        RoutineService service = new RoutineService(repo, mock(TodoRepository.class), mock(RoutineTodoWriter.class));
 
         List<Routine> routines = service.getRoutines(MEMBER_ID);
 
@@ -55,7 +55,7 @@ class RoutineServiceTest {
         RoutineRepository repo = mock(RoutineRepository.class);
         UUID id = UUID.randomUUID();
         when(repo.findByIdAndMemberId(id, MEMBER_ID)).thenReturn(Optional.empty());
-        RoutineService service = new RoutineService(repo, mock(TodoRepository.class));
+        RoutineService service = new RoutineService(repo, mock(TodoRepository.class), mock(RoutineTodoWriter.class));
 
         assertThatThrownBy(() -> service.getRoutine(MEMBER_ID, id))
                 .isInstanceOf(BusinessException.class)
@@ -69,7 +69,7 @@ class RoutineServiceTest {
         UUID id = UUID.randomUUID();
         UUID otherMemberId = UUID.randomUUID();
         when(repo.findByIdAndMemberId(id, otherMemberId)).thenReturn(Optional.empty());
-        RoutineService service = new RoutineService(repo, mock(TodoRepository.class));
+        RoutineService service = new RoutineService(repo, mock(TodoRepository.class), mock(RoutineTodoWriter.class));
 
         assertThatThrownBy(() -> service.getRoutine(otherMemberId, id))
                 .isInstanceOf(BusinessException.class)
@@ -83,7 +83,7 @@ class RoutineServiceTest {
         UUID id = UUID.randomUUID();
         RoutineEntity existing = RoutineEntity.create(MEMBER_ID, "루틴", null, null, Set.of(DayOfWeek.MONDAY));
         when(repo.findByIdAndMemberId(id, MEMBER_ID)).thenReturn(Optional.of(existing));
-        RoutineService service = new RoutineService(repo, mock(TodoRepository.class));
+        RoutineService service = new RoutineService(repo, mock(TodoRepository.class), mock(RoutineTodoWriter.class));
 
         Routine routine = service.getRoutine(MEMBER_ID, id);
 
@@ -94,7 +94,7 @@ class RoutineServiceTest {
     void 등록하면_활성상태로_본인_소유로_생성된다() {
         RoutineRepository repo = mock(RoutineRepository.class);
         when(repo.save(any(RoutineEntity.class))).thenAnswer(inv -> inv.getArgument(0));
-        RoutineService service = new RoutineService(repo, mock(TodoRepository.class));
+        RoutineService service = new RoutineService(repo, mock(TodoRepository.class), mock(RoutineTodoWriter.class));
 
         Routine routine = service.createRoutine(MEMBER_ID,
                 new RoutineRequest("아침 운동", LocalTime.of(7, 0), Set.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY), null));
@@ -111,7 +111,7 @@ class RoutineServiceTest {
     void 요일이_평일이면_프리셋이_평일로_판정된다() {
         RoutineRepository repo = mock(RoutineRepository.class);
         when(repo.save(any(RoutineEntity.class))).thenAnswer(inv -> inv.getArgument(0));
-        RoutineService service = new RoutineService(repo, mock(TodoRepository.class));
+        RoutineService service = new RoutineService(repo, mock(TodoRepository.class), mock(RoutineTodoWriter.class));
 
         Routine routine = service.createRoutine(MEMBER_ID, new RoutineRequest("출근", null,
                 Set.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY), null));
@@ -123,7 +123,7 @@ class RoutineServiceTest {
     void 등록시_라벨을_지정하면_반영된다() {
         RoutineRepository repo = mock(RoutineRepository.class);
         when(repo.save(any(RoutineEntity.class))).thenAnswer(inv -> inv.getArgument(0));
-        RoutineService service = new RoutineService(repo, mock(TodoRepository.class));
+        RoutineService service = new RoutineService(repo, mock(TodoRepository.class), mock(RoutineTodoWriter.class));
         UUID labelId = UUID.randomUUID();
 
         Routine routine = service.createRoutine(MEMBER_ID,
@@ -136,7 +136,7 @@ class RoutineServiceTest {
     void 등록시_시간_미지정이면_null로_저장된다() {
         RoutineRepository repo = mock(RoutineRepository.class);
         when(repo.save(any(RoutineEntity.class))).thenAnswer(inv -> inv.getArgument(0));
-        RoutineService service = new RoutineService(repo, mock(TodoRepository.class));
+        RoutineService service = new RoutineService(repo, mock(TodoRepository.class), mock(RoutineTodoWriter.class));
 
         Routine routine = service.createRoutine(MEMBER_ID,
                 new RoutineRequest("독서", null, Set.of(DayOfWeek.SUNDAY), null));
@@ -157,7 +157,7 @@ class RoutineServiceTest {
         RoutineRepository repo = mock(RoutineRepository.class);
         UUID id = UUID.randomUUID();
         when(repo.findByIdAndMemberId(id, MEMBER_ID)).thenReturn(Optional.empty());
-        RoutineService service = new RoutineService(repo, mock(TodoRepository.class));
+        RoutineService service = new RoutineService(repo, mock(TodoRepository.class), mock(RoutineTodoWriter.class));
 
         assertThatThrownBy(() -> service.updateRoutine(MEMBER_ID, id, updateRequest(null, null, null, true)))
                 .isInstanceOf(BusinessException.class)
@@ -168,7 +168,7 @@ class RoutineServiceTest {
     @Test
     void 수정시_제목이_공백이면_예외() {
         RoutineRepository repo = mock(RoutineRepository.class);
-        RoutineService service = new RoutineService(repo, mock(TodoRepository.class));
+        RoutineService service = new RoutineService(repo, mock(TodoRepository.class), mock(RoutineTodoWriter.class));
 
         assertThatThrownBy(() -> service.updateRoutine(MEMBER_ID, UUID.randomUUID(), updateRequest("   ", null, null, null)))
                 .isInstanceOf(BusinessException.class)
@@ -179,7 +179,7 @@ class RoutineServiceTest {
     @Test
     void 수정시_요일이_빈집합이면_예외() {
         RoutineRepository repo = mock(RoutineRepository.class);
-        RoutineService service = new RoutineService(repo, mock(TodoRepository.class));
+        RoutineService service = new RoutineService(repo, mock(TodoRepository.class), mock(RoutineTodoWriter.class));
 
         assertThatThrownBy(() -> service.updateRoutine(MEMBER_ID, UUID.randomUUID(), updateRequest(null, null, Set.of(), null)))
                 .isInstanceOf(BusinessException.class)
@@ -193,7 +193,7 @@ class RoutineServiceTest {
         UUID id = UUID.randomUUID();
         RoutineEntity existing = entity("기존 루틴", LocalTime.of(7, 0), Set.of(DayOfWeek.MONDAY));
         when(repo.findByIdAndMemberId(id, MEMBER_ID)).thenReturn(Optional.of(existing));
-        RoutineService service = new RoutineService(repo, mock(TodoRepository.class));
+        RoutineService service = new RoutineService(repo, mock(TodoRepository.class), mock(RoutineTodoWriter.class));
 
         Routine routine = service.updateRoutine(MEMBER_ID, id, updateRequest(null, null, null, false));
 
@@ -209,7 +209,7 @@ class RoutineServiceTest {
         UUID id = UUID.randomUUID();
         RoutineEntity existing = entity("루틴", null, Set.of(DayOfWeek.MONDAY));
         when(repo.findByIdAndMemberId(id, MEMBER_ID)).thenReturn(Optional.of(existing));
-        RoutineService service = new RoutineService(repo, mock(TodoRepository.class));
+        RoutineService service = new RoutineService(repo, mock(TodoRepository.class), mock(RoutineTodoWriter.class));
 
         Routine routine = service.updateRoutine(MEMBER_ID, id,
                 updateRequest(null, null, Set.of(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY), null));
@@ -224,7 +224,7 @@ class RoutineServiceTest {
         UUID id = UUID.randomUUID();
         RoutineEntity existing = entity("루틴", null, Set.of(DayOfWeek.MONDAY));
         when(repo.findByIdAndMemberId(id, MEMBER_ID)).thenReturn(Optional.of(existing));
-        RoutineService service = new RoutineService(repo, mock(TodoRepository.class));
+        RoutineService service = new RoutineService(repo, mock(TodoRepository.class), mock(RoutineTodoWriter.class));
         UUID labelId = UUID.randomUUID();
 
         Routine routine = service.updateRoutine(MEMBER_ID, id, new RoutineUpdateRequest(null, null, null, null, labelId));
@@ -237,7 +237,7 @@ class RoutineServiceTest {
         RoutineRepository repo = mock(RoutineRepository.class);
         UUID id = UUID.randomUUID();
         when(repo.findByIdAndMemberId(id, MEMBER_ID)).thenReturn(Optional.empty());
-        RoutineService service = new RoutineService(repo, mock(TodoRepository.class));
+        RoutineService service = new RoutineService(repo, mock(TodoRepository.class), mock(RoutineTodoWriter.class));
 
         assertThatThrownBy(() -> service.deleteRoutine(MEMBER_ID, id))
                 .isInstanceOf(BusinessException.class)
@@ -251,7 +251,7 @@ class RoutineServiceTest {
         UUID id = UUID.randomUUID();
         RoutineEntity existing = entity("루틴", null, Set.of(DayOfWeek.MONDAY));
         when(repo.findByIdAndMemberId(id, MEMBER_ID)).thenReturn(Optional.of(existing));
-        RoutineService service = new RoutineService(repo, mock(TodoRepository.class));
+        RoutineService service = new RoutineService(repo, mock(TodoRepository.class), mock(RoutineTodoWriter.class));
 
         service.deleteRoutine(MEMBER_ID, id);
 
@@ -261,7 +261,7 @@ class RoutineServiceTest {
     @Test
     void 일괄등록시_from이_to보다_늦으면_예외() {
         RoutineRepository repo = mock(RoutineRepository.class);
-        RoutineService service = new RoutineService(repo, mock(TodoRepository.class));
+        RoutineService service = new RoutineService(repo, mock(TodoRepository.class), mock(RoutineTodoWriter.class));
         LocalDate from = LocalDate.of(2026, 8, 3);
         LocalDate to = LocalDate.of(2026, 7, 27);
 
@@ -274,7 +274,7 @@ class RoutineServiceTest {
     @Test
     void 일괄등록시_기간이_90일을_넘으면_예외() {
         RoutineRepository repo = mock(RoutineRepository.class);
-        RoutineService service = new RoutineService(repo, mock(TodoRepository.class));
+        RoutineService service = new RoutineService(repo, mock(TodoRepository.class), mock(RoutineTodoWriter.class));
         LocalDate from = LocalDate.of(2026, 1, 1);
         LocalDate to = LocalDate.of(2026, 12, 31);
 
@@ -288,7 +288,7 @@ class RoutineServiceTest {
     void 일괄등록시_기간이_90일_이하면_허용된다() {
         RoutineRepository repo = mock(RoutineRepository.class);
         when(repo.findByActiveTrueAndMemberId(MEMBER_ID)).thenReturn(List.of());
-        RoutineService service = new RoutineService(repo, mock(TodoRepository.class));
+        RoutineService service = new RoutineService(repo, mock(TodoRepository.class), mock(RoutineTodoWriter.class));
         LocalDate from = LocalDate.of(2026, 1, 1);
         LocalDate to = from.plusDays(90);
 
@@ -301,32 +301,34 @@ class RoutineServiceTest {
     void 일괄등록시_반복요일에_해당하는_날짜만_todo로_생성된다() {
         RoutineRepository repo = mock(RoutineRepository.class);
         TodoRepository todoRepo = mock(TodoRepository.class);
+        RoutineTodoWriter writer = mock(RoutineTodoWriter.class);
         RoutineEntity routine = entity("아침 운동", LocalTime.of(7, 0),
                 Set.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY));
         when(repo.findByActiveTrueAndMemberId(MEMBER_ID)).thenReturn(List.of(routine));
         when(todoRepo.existsByTodoDateAndSourceAndSourceRefId(any(), eq(TodoSource.ROUTINE), eq(routine.getId())))
                 .thenReturn(false);
-        RoutineService service = new RoutineService(repo, todoRepo);
+        RoutineService service = new RoutineService(repo, todoRepo, writer);
 
         // 2026-07-27(월) ~ 2026-08-02(일), 1주
         RoutineApplyResponse result = service.applyRoutines(
                 MEMBER_ID, LocalDate.of(2026, 7, 27), LocalDate.of(2026, 8, 2));
 
         assertThat(result.created()).isEqualTo(3);
-        verify(todoRepo, times(3)).saveAndFlush(any(TodoEntity.class));
+        verify(writer, times(3)).save(any(TodoEntity.class));
     }
 
     @Test
     void 일괄등록시_동시요청으로_유니크제약이_걸리면_해당_건만_건너뛴다() {
         RoutineRepository repo = mock(RoutineRepository.class);
         TodoRepository todoRepo = mock(TodoRepository.class);
+        RoutineTodoWriter writer = mock(RoutineTodoWriter.class);
         RoutineEntity routine = entity("독서", null, Set.of(DayOfWeek.SUNDAY));
         when(repo.findByActiveTrueAndMemberId(MEMBER_ID)).thenReturn(List.of(routine));
         when(todoRepo.existsByTodoDateAndSourceAndSourceRefId(any(), eq(TodoSource.ROUTINE), eq(routine.getId())))
                 .thenReturn(false);
-        when(todoRepo.saveAndFlush(any(TodoEntity.class)))
-                .thenThrow(new org.springframework.dao.DataIntegrityViolationException("uk_todo_routine_dedup"));
-        RoutineService service = new RoutineService(repo, todoRepo);
+        org.mockito.Mockito.doThrow(new org.springframework.dao.DataIntegrityViolationException("uk_todo_routine_dedup"))
+                .when(writer).save(any(TodoEntity.class));
+        RoutineService service = new RoutineService(repo, todoRepo, writer);
 
         RoutineApplyResponse result = service.applyRoutines(
                 MEMBER_ID, LocalDate.of(2026, 8, 2), LocalDate.of(2026, 8, 2));
@@ -338,57 +340,61 @@ class RoutineServiceTest {
     void 일괄등록시_이미_생성된_todo는_건너뛴다() {
         RoutineRepository repo = mock(RoutineRepository.class);
         TodoRepository todoRepo = mock(TodoRepository.class);
+        RoutineTodoWriter writer = mock(RoutineTodoWriter.class);
         RoutineEntity routine = entity("독서", null, Set.of(DayOfWeek.SUNDAY));
         when(repo.findByActiveTrueAndMemberId(MEMBER_ID)).thenReturn(List.of(routine));
         when(todoRepo.existsByTodoDateAndSourceAndSourceRefId(any(), eq(TodoSource.ROUTINE), eq(routine.getId())))
                 .thenReturn(true);
-        RoutineService service = new RoutineService(repo, todoRepo);
+        RoutineService service = new RoutineService(repo, todoRepo, writer);
 
         RoutineApplyResponse result = service.applyRoutines(
                 MEMBER_ID, LocalDate.of(2026, 8, 2), LocalDate.of(2026, 8, 2));
 
         assertThat(result.created()).isEqualTo(0);
-        verify(todoRepo, never()).saveAndFlush(any(TodoEntity.class));
+        verify(writer, never()).save(any(TodoEntity.class));
     }
 
     @Test
     void 일괄등록시_비활성_루틴은_대상에서_제외된다() {
         RoutineRepository repo = mock(RoutineRepository.class);
         TodoRepository todoRepo = mock(TodoRepository.class);
+        RoutineTodoWriter writer = mock(RoutineTodoWriter.class);
         when(repo.findByActiveTrueAndMemberId(MEMBER_ID)).thenReturn(List.of());
-        RoutineService service = new RoutineService(repo, todoRepo);
+        RoutineService service = new RoutineService(repo, todoRepo, writer);
 
         RoutineApplyResponse result = service.applyRoutines(
                 MEMBER_ID, LocalDate.of(2026, 7, 27), LocalDate.of(2026, 8, 2));
 
         assertThat(result.created()).isEqualTo(0);
-        verify(todoRepo, never()).saveAndFlush(any(TodoEntity.class));
+        verify(writer, never()).save(any(TodoEntity.class));
     }
 
     @Test
     void 일괄등록시_다른_회원의_루틴은_대상에서_제외된다() {
         RoutineRepository repo = mock(RoutineRepository.class);
         TodoRepository todoRepo = mock(TodoRepository.class);
+        RoutineTodoWriter writer = mock(RoutineTodoWriter.class);
         when(repo.findByActiveTrueAndMemberId(MEMBER_ID)).thenReturn(List.of());
-        RoutineService service = new RoutineService(repo, todoRepo);
+        RoutineService service = new RoutineService(repo, todoRepo, writer);
 
         RoutineApplyResponse result = service.applyRoutines(
                 MEMBER_ID, LocalDate.of(2026, 7, 27), LocalDate.of(2026, 8, 2));
 
         assertThat(result.created()).isEqualTo(0);
         verify(repo, never()).findByActiveTrue();
-        verify(todoRepo, never()).saveAndFlush(any(TodoEntity.class));
+        verify(writer, never()).save(any(TodoEntity.class));
     }
 
     @Test
     void 전회원_일괄등록시_회원_구분없이_전체_활성루틴이_대상이_된다() {
         RoutineRepository repo = mock(RoutineRepository.class);
         TodoRepository todoRepo = mock(TodoRepository.class);
+        RoutineTodoWriter writer = mock(RoutineTodoWriter.class);
         RoutineEntity routineOfMemberA = entity("루틴A", null, Set.of(DayOfWeek.SUNDAY));
         when(repo.findByActiveTrue()).thenReturn(List.of(routineOfMemberA));
         when(todoRepo.existsByTodoDateAndSourceAndSourceRefId(any(), eq(TodoSource.ROUTINE), eq(routineOfMemberA.getId())))
                 .thenReturn(false);
-        RoutineService service = new RoutineService(repo, todoRepo);
+        RoutineService service = new RoutineService(repo, todoRepo, writer);
 
         RoutineApplyResponse result = service.applyRoutinesForAllMembers(
                 LocalDate.of(2026, 8, 2), LocalDate.of(2026, 8, 2));

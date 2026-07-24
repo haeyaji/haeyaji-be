@@ -2,6 +2,7 @@ package com.haeyaji.be.todo.service;
 
 import com.haeyaji.be.common.exception.BusinessException;
 import com.haeyaji.be.common.exception.ErrorCode;
+import com.haeyaji.be.label.repository.LabelRepository;
 import com.haeyaji.be.todo.domain.InviteStatus;
 import com.haeyaji.be.todo.domain.ParticipantRole;
 import com.haeyaji.be.todo.domain.Todo;
@@ -18,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -27,8 +29,12 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class TodoService {
 
+    /** 과거날짜 검증을 JVM 기본 타임존(컨테이너 UTC일 수 있음) 대신 KST로 고정한다(L4). */
+    private static final ZoneId ZONE = ZoneId.of("Asia/Seoul");
+
     private final TodoRepository todoRepository;
     private final TodoParticipantRepository todoParticipantRepository;
+    private final LabelRepository labelRepository;
     private final Clock clock;
 
     public List<Todo> getTodosByDate(UUID memberId, LocalDate date) {
@@ -39,10 +45,14 @@ public class TodoService {
 
     @Transactional
     public Todo createTodo(UUID memberId, TodoRequest request) {
-        if (request.date().isBefore(LocalDate.now(clock))) {
+        if (request.date().isBefore(LocalDate.now(clock.withZone(ZONE)))) {
             throw new BusinessException(ErrorCode.PAST_DATE_NOT_ALLOWED);
         }
-        TodoSource source = request.source() != null ? request.source() : TodoSource.MANUAL;
+        if (request.labelId() != null) {
+            requireOwnedLabel(memberId, request.labelId());
+        }
+        // 공개 생성 엔드포인트라 클라가 source를 임의 지정(ROUTINE/MEETING 위장 등) 못 하게 항상 MANUAL로 고정한다(L5).
+        // ROUTINE/MEETING 출처는 각자의 전용 생성 경로(TodoEntity.createFromRoutine 등)로만 만들어진다.
         boolean pinned = request.pinned() != null ? request.pinned() : false;
         int sortOrder = request.sortOrder() != null ? request.sortOrder() : 0;
         TodoEntity entity = TodoEntity.create(
@@ -55,7 +65,7 @@ public class TodoService {
                 request.lat(),
                 request.lng(),
                 request.labelId(),
-                source,
+                TodoSource.MANUAL,
                 pinned,
                 sortOrder
         );
@@ -70,6 +80,9 @@ public class TodoService {
     public Todo updateTodo(UUID memberId, UUID id, TodoUpdateRequest request) {
         if (request.title() != null && request.title().isBlank()) {
             throw new BusinessException(ErrorCode.INVALID_PARAMETER);
+        }
+        if (request.labelId() != null) {
+            requireOwnedLabel(memberId, request.labelId());
         }
         TodoEntity entity = findEditableTodo(memberId, id);
         entity.update(request.title(), request.time(),
@@ -99,5 +112,11 @@ public class TodoService {
                 .filter(p -> p.getInviteStatus() == InviteStatus.ACCEPTED)
                 .filter(p -> p.getRole().isAtLeast(ParticipantRole.EDITOR))
                 .flatMap(p -> todoRepository.findById(id));
+    }
+
+    /** labelId가 호출자 소유가 아니면 거부(M2) — 타 회원 라벨을 자기 todo에 박아 사용중 오차단·고아참조를 만드는 걸 막는다. */
+    private void requireOwnedLabel(UUID memberId, UUID labelId) {
+        labelRepository.findByIdAndMemberId(labelId, memberId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
     }
 }

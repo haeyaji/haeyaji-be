@@ -6,6 +6,7 @@
   "notes": [
     "모든 meeting 엔드포인트는 인증 필수다. accessToken(JWT)을 Authorization: Bearer 헤더 또는 accessToken 쿠키로 전달하며, 요청 회원은 토큰의 sub(member id UUID)로 식별된다 — creatorId/memberId를 body·query로 보내지 않는다. 토큰이 없거나 무효면 401(UNAUTHORIZED).",
     "POST/PUT/PATCH/DELETE는 CSRF 더블서브밋이 필요하다: XSRF-TOKEN 쿠키 값과 동일한 값을 X-XSRF-TOKEN 헤더에 실어 보낸다. 누락 시 403.",
+    "알림(noti) 연계: 초대 시 MeetingInvitedEvent, 확정 시 MeetingConfirmedEvent 도메인 이벤트가 발행된다(ref_id=meetingId, link_token=shareToken). 알림 모듈이 구독해 MEETING_INVITE/MEETING_CONFIRMED notification을 생성할 예정이며, meeting은 초대 행을 별도 저장하지 않는다.",
     "생성 이후 모든 접근은 shareToken 경로(/meetings/{shareToken}/...)를 사용한다. meeting의 UUID id는 참조용으로만 응답에 포함된다.",
     "시간 구간은 모두 끝(end) 배타(exclusive)다. 예: 09:30~10:30 확정 = 09:30, 10:00 두 슬롯.",
     "만료(EXPIRED)는 DB에 저장되지 않고 조회 시점에 판정된다(lazy). deadline이 지난 COLLECTING 약속은 조회 시 EXPIRED로 내려오고, 참여/응답/확정은 410으로 차단된다.",
@@ -113,6 +114,10 @@
     "SlotResponseItem": {
       "slotId": { "type": "uuid", "description": "MeetingDetail.slots[].id" },
       "status": { "type": "ResponseStatus (string)" }
+    },
+    "MeetingInvite": {
+      "invitedMemberIds": { "type": "uuid[]", "description": "초대 이벤트가 발행된 회원 (알림 수신 예정)" },
+      "skippedMemberIds": { "type": "uuid[]", "description": "이미 참여 중이라 초대에서 제외된 회원" }
     },
     "Heatmap": {
       "participantCount": { "type": "int", "description": "전체 참여 인원(분모)" },
@@ -297,6 +302,30 @@
           "joinedAt": "2026-07-22T16:40:02.608919117"
         },
         "timestamp": "2026-07-22T07:40:02.616703325Z"
+      }
+    },
+    {
+      "id": "NOTI 연계",
+      "name": "약속 초대",
+      "method": "POST",
+      "path": "/meetings/{shareToken}/invitations",
+      "request": {
+        "memberIds": { "type": "uuid[]", "required": true, "constraints": "1~50개. 중복은 1건으로 처리, 이미 참여 중인 회원은 스킵. 초대자는 참여자여야 함(토큰으로 식별)" }
+      },
+      "success": { "httpStatus": 201, "code": "CREATED", "dataSchema": "MeetingInvite", "description": "초대 행 저장 없음 — MeetingInvitedEvent 발행(알림 모듈 구독 예정). 회원 실존 검증은 하지 않음" },
+      "errors": ["MEETING_NOT_FOUND", "MEETING_EXPIRED", "MEETING_ALREADY_CONFIRMED", "NOT_MEETING_PARTICIPANT", "INVALID_PARAMETER"],
+      "exampleRequest": {
+        "memberIds": ["22222222-2222-7222-8222-222222222222", "33333333-3333-7333-8333-333333333333"]
+      },
+      "exampleResponse": {
+        "success": true,
+        "code": "CREATED",
+        "message": "생성에 성공했습니다.",
+        "data": {
+          "invitedMemberIds": ["22222222-2222-7222-8222-222222222222", "33333333-3333-7333-8333-333333333333"],
+          "skippedMemberIds": []
+        },
+        "timestamp": "2026-07-23T08:25:16.464611162Z"
       }
     },
     {

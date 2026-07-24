@@ -41,6 +41,10 @@ public class Notification extends ImmutableBaseEntity {
     @Column(name = "ref_id")
     private UUID refId;
 
+    // 딥링크용 토큰 (예: meeting.shareToken). 대상 리소스가 shareToken 기반으로만 조회되는 경우 사용
+    @Column(name = "link_token", length = 20)
+    private String linkToken;
+
     @Column(name = "is_read", nullable = false)
     private boolean read;
 
@@ -48,18 +52,19 @@ public class Notification extends ImmutableBaseEntity {
     private LocalDateTime readAt;
 
     @Builder(access = AccessLevel.PRIVATE)
-    private Notification(UUID memberId, NotificationCategory category, NotificationType type, String title, String body, UUID refId) {
+    private Notification(UUID memberId, NotificationCategory category, NotificationType type, String title, String body, UUID refId, String linkToken) {
         this.memberId = memberId;
         this.category = category;
         this.type = type;
         this.title = title;
         this.body = body;
         this.refId = refId;
+        this.linkToken = linkToken;
         this.read = false;
         this.readAt = null;
     }
 
-    public static Notification create(UUID memberId, NotificationCategory category, NotificationType type, String title, String body, UUID refId) {
+    public static Notification create(UUID memberId, NotificationCategory category, NotificationType type, String title, String body, UUID refId, String linkToken) {
         return Notification.builder()
                 .memberId(memberId)
                 .category(category)
@@ -67,6 +72,7 @@ public class Notification extends ImmutableBaseEntity {
                 .title(title)
                 .body(body)
                 .refId(refId)
+                .linkToken(linkToken)
                 .build();
     }
 

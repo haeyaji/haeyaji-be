@@ -87,7 +87,7 @@ public class NotificationService {
 
     @Transactional
     public Notification send(UUID actorId, UUID memberId, NotificationCategory category, NotificationType type,
-                              String title, String body, UUID refId) {
+                              String title, String body, UUID refId, String linkToken) {
 
         if (actorId.equals(memberId)) {
             return null;  // 본인 행동으로 발생한 알림은 본인에게 안 보냄
@@ -99,7 +99,7 @@ public class NotificationService {
             return null;
         }
 
-        Notification noti = Notification.create(memberId, category, type, title, body, refId);
+        Notification noti = Notification.create(memberId, category, type, title, body, refId, linkToken);
 
         // DataIntegrityViolationException 고려
         notificationRepository.save(noti);

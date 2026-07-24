@@ -14,6 +14,7 @@ public record NotificationResponse(
         String title,
         String body,
         UUID refId,
+        String linkToken,
         boolean read,
         LocalDateTime createdAt,
         LocalDateTime readAt
@@ -27,6 +28,7 @@ public record NotificationResponse(
                 notification.getTitle(),
                 notification.getBody(),
                 notification.getRefId(),
+                notification.getLinkToken(),
                 notification.isRead(),
                 notification.getCreatedAt(),
                 notification.getReadAt()

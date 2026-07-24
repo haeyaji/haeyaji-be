@@ -2,11 +2,14 @@ package com.haeyaji.be.todo.service;
 
 import com.haeyaji.be.common.exception.BusinessException;
 import com.haeyaji.be.common.exception.ErrorCode;
+import com.haeyaji.be.todo.domain.InviteStatus;
+import com.haeyaji.be.todo.domain.ParticipantRole;
 import com.haeyaji.be.todo.domain.Todo;
 import com.haeyaji.be.todo.domain.TodoSource;
 import com.haeyaji.be.todo.dto.TodoRequest;
 import com.haeyaji.be.todo.dto.TodoUpdateRequest;
 import com.haeyaji.be.todo.repository.TodoEntity;
+import com.haeyaji.be.todo.repository.TodoParticipantRepository;
 import com.haeyaji.be.todo.repository.TodoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,6 +19,7 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -24,6 +28,7 @@ import java.util.UUID;
 public class TodoService {
 
     private final TodoRepository todoRepository;
+    private final TodoParticipantRepository todoParticipantRepository;
     private final Clock clock;
 
     public List<Todo> getTodosByDate(UUID memberId, LocalDate date) {
@@ -57,13 +62,16 @@ public class TodoService {
         return todoRepository.save(entity).toDomain();
     }
 
+    /**
+     * 소유자 또는 EDITOR 이상 권한으로 수락한 공유 참여자만 수정 가능 (SHARE-2).
+     * 삭제는 소유권 이전 개념이 없어 owner 전용으로 남겨둔다 — 참여자는 나가기(leave)만 가능.
+     */
     @Transactional
     public Todo updateTodo(UUID memberId, UUID id, TodoUpdateRequest request) {
         if (request.title() != null && request.title().isBlank()) {
             throw new BusinessException(ErrorCode.INVALID_PARAMETER);
         }
-        TodoEntity entity = todoRepository.findByIdAndMemberId(id, memberId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        TodoEntity entity = findEditableTodo(memberId, id);
         entity.update(request.title(), request.time(),
                 request.placeName(), request.placeUrl(), request.lat(), request.lng(),
                 request.labelId(), request.pinned(), request.sortOrder());
@@ -78,5 +86,18 @@ public class TodoService {
         TodoEntity entity = todoRepository.findByIdAndMemberId(id, memberId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         todoRepository.delete(entity);
+    }
+
+    private TodoEntity findEditableTodo(UUID memberId, UUID id) {
+        return todoRepository.findByIdAndMemberId(id, memberId)
+                .or(() -> findAsEditor(memberId, id))
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+    }
+
+    private Optional<TodoEntity> findAsEditor(UUID memberId, UUID id) {
+        return todoParticipantRepository.findByTodoIdAndMemberId(id, memberId)
+                .filter(p -> p.getInviteStatus() == InviteStatus.ACCEPTED)
+                .filter(p -> p.getRole().isAtLeast(ParticipantRole.EDITOR))
+                .flatMap(p -> todoRepository.findById(id));
     }
 }

@@ -71,7 +71,11 @@ public class Notification extends ImmutableBaseEntity {
     }
 
     public void markAsRead() {
+        if (!this.read) {
+            this.readAt = LocalDateTime.now();
+        }
+
         this.read = true;
-        this.readAt = LocalDateTime.now();
+
     }
 }

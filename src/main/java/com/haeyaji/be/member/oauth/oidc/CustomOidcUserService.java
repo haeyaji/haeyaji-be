@@ -35,7 +35,14 @@ public class CustomOidcUserService extends OidcUserService {
          */
 
         String registrationId = userRequest.getClientRegistration().getRegistrationId();
-        SocialType socialType = SocialType.valueOf(registrationId.toUpperCase());
+
+        SocialType socialType;
+        try {
+            socialType = SocialType.valueOf(registrationId.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new OAuth2AuthenticationException("지원하지 않는 소셜 로그인, [registrationId]: " + registrationId);
+        }
+
         String userNameAttributeName = userRequest.getClientRegistration()
                 .getProviderDetails().getUserInfoEndpoint().getUserNameAttributeName();
 

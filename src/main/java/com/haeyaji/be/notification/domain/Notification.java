@@ -7,6 +7,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -36,17 +37,41 @@ public class Notification extends ImmutableBaseEntity {
     @Column(length = 255)
     private String body;
 
-    // 연관 대상 id (meeting/todo 등), 다형참조
+    // 연관 대상 id (meeting/todoo 등)
     @Column(name = "ref_id")
     private UUID refId;
-
-    // 초대류면 meeting.share_token
-    @Column(name = "link_token", length = 64)
-    private String linkToken;
 
     @Column(name = "is_read", nullable = false)
     private boolean read;
 
     @Column(name = "read_at")
     private LocalDateTime readAt;
+
+    @Builder(access = AccessLevel.PRIVATE)
+    private Notification(UUID memberId, NotificationCategory category, NotificationType type, String title, String body, UUID refId) {
+        this.memberId = memberId;
+        this.category = category;
+        this.type = type;
+        this.title = title;
+        this.body = body;
+        this.refId = refId;
+        this.read = false;
+        this.readAt = null;
+    }
+
+    public static Notification create(UUID memberId, NotificationCategory category, NotificationType type, String title, String body, UUID refId) {
+        return Notification.builder()
+                .memberId(memberId)
+                .category(category)
+                .type(type)
+                .title(title)
+                .body(body)
+                .refId(refId)
+                .build();
+    }
+
+    public void markAsRead() {
+        this.read = true;
+        this.readAt = LocalDateTime.now();
+    }
 }

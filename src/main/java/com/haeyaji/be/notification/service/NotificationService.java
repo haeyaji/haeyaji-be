@@ -80,10 +80,14 @@ public class NotificationService {
         notificationRepository.delete(noti);
     }
 
-     // 행위자 != 수신자는 호출부에서 필터링
+     //
     @Transactional
-    public Notification send(UUID memberId, NotificationCategory category, NotificationType type,
+    public Notification send(UUID actorId, UUID memberId, NotificationCategory category, NotificationType type,
                               String title, String body, UUID refId) {
+
+        if (actorId.equals(memberId)) {
+            return null;  // 본인 행동으로 발생한 알림은 본인에게 안 보냄
+        }
 
         // 이미 같은 알림이 발송되었을 경우 return (멱등)
         if (notificationRepository.existsByMemberIdAndTypeAndRefId(memberId, type, refId)) {

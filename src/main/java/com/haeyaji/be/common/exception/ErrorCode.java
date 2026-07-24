@@ -33,6 +33,9 @@ public enum ErrorCode implements ResponseCode {
 
     REQUEST_ALREADY_PROCESSED(HttpStatus.BAD_REQUEST, "이미 처리된 요청입니다."),
 
+    NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 알림이 존재하지 않습니다."),
+    NOTIFICATION_FORBIDDEN(HttpStatus.FORBIDDEN, "자신의 알림만 확인할 수 있습니다."),
+
     ;
 
     private final HttpStatus status;

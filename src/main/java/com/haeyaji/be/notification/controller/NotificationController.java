@@ -1,7 +1,11 @@
 package com.haeyaji.be.notification.controller;
 
+import com.haeyaji.be.common.exception.ResponseCode;
 import com.haeyaji.be.common.response.ApiResponse;
+import com.haeyaji.be.common.response.CursorPageResponse;
+import com.haeyaji.be.common.response.SuccessCode;
 import com.haeyaji.be.member.oauth.CustomUserDetails;
+import com.haeyaji.be.notification.domain.Notification;
 import com.haeyaji.be.notification.domain.NotificationType;
 import com.haeyaji.be.notification.dto.NotificationResponse;
 import com.haeyaji.be.notification.service.NotificationService;
@@ -15,7 +19,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -37,32 +40,47 @@ public class NotificationController {
     private final NotificationService notificationService;
 
     @GetMapping
-    public ApiResponse<List<NotificationResponse>> getNotifications(@AuthenticationPrincipal CustomUserDetails userDetails,
-                                                                      @RequestParam(required = false) NotificationType type,
-                                                                      @RequestParam(required = false) UUID cursor,
-                                                                      @RequestParam(defaultValue = "20") int size) {
-        return null;
+    public ApiResponse<CursorPageResponse<NotificationResponse, UUID>> getNotifications(@AuthenticationPrincipal CustomUserDetails userDetails,
+                                                                                          @RequestParam(required = false) NotificationType type,
+                                                                                          @RequestParam(required = false) UUID cursor,
+                                                                                          @RequestParam(defaultValue = "20") int size) {
+
+        CursorPageResponse<Notification, UUID> pageResponse = notificationService.getNotifications(userDetails.getMemberId(), type, cursor, size);
+
+        return ApiResponse.of(pageResponse.map(NotificationResponse::from), SuccessCode.GET_SUCCESS);
     }
 
     @GetMapping("/unread-count")
     public ApiResponse<Long> getUnreadCount(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        return null;
+
+        long unreadNotiCount = notificationService.getUnreadCount(userDetails.getMemberId());
+
+        return ApiResponse.of(unreadNotiCount, SuccessCode.GET_SUCCESS);
     }
 
     @PostMapping("/{id}/read")
     public ApiResponse<Void> markAsRead(@AuthenticationPrincipal CustomUserDetails userDetails,
                                          @PathVariable UUID id) {
-        return null;
+
+        notificationService.markAsRead(id, userDetails.getMemberId());
+
+        return ApiResponse.of(null, SuccessCode.POST_SUCCESS);
     }
 
     @PostMapping("/read-all")
     public ApiResponse<Void> markAllAsRead(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        return null;
+
+        notificationService.markAllAsRead(userDetails.getMemberId());
+
+        return ApiResponse.of(null, SuccessCode.POST_SUCCESS);
     }
 
     @DeleteMapping("/{id}")
     public ApiResponse<Void> deleteNotification(@AuthenticationPrincipal CustomUserDetails userDetails,
                                                  @PathVariable UUID id) {
-        return null;
+
+        notificationService.deleteNotification(id, userDetails.getMemberId());
+
+        return ApiResponse.of(null, SuccessCode.DELETE_SUCCESS);
     }
 }

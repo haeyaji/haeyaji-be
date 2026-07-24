@@ -48,7 +48,7 @@ public class NotificationService {
         Notification noti = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOTIFICATION_NOT_FOUND));
 
-        if (noti.getMemberId() != memberId) {
+        if (!noti.getMemberId().equals(memberId)) {
             throw new BusinessException(ErrorCode.NOTIFICATION_FORBIDDEN);
         }
 
@@ -70,7 +70,7 @@ public class NotificationService {
         Notification noti = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOTIFICATION_NOT_FOUND));
 
-        if (noti.getMemberId() != memberId) {
+        if (!noti.getMemberId().equals(memberId)) {
             throw new BusinessException(ErrorCode.NOTIFICATION_FORBIDDEN);
         }
 

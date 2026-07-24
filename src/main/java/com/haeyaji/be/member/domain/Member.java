@@ -55,7 +55,10 @@ public class Member extends MutableBaseEntity {
     }
 
     public Member update(String email) {
-        this.email = email;
+
+        if (email != null) {
+            this.email = email;
+        }
 
         return this;
     }

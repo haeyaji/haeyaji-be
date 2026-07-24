@@ -4,17 +4,14 @@ import com.haeyaji.be.common.response.ApiResponse;
 import com.haeyaji.be.common.response.SuccessCode;
 import com.haeyaji.be.member.domain.Member;
 import com.haeyaji.be.member.dto.MemberResponse;
+import com.haeyaji.be.member.dto.MemberSearchResponse;
 import com.haeyaji.be.member.dto.NicknameUpdateRequest;
 import com.haeyaji.be.member.oauth.CustomUserDetails;
 import com.haeyaji.be.member.service.MemberService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/members")
@@ -34,5 +31,12 @@ public class MemberController {
                                              @Valid @RequestBody NicknameUpdateRequest request) {
         memberService.updateNickname(userDetails.getMemberId(), request.nickname());
         return ApiResponse.of(null, SuccessCode.PUT_SUCCESS);
+    }
+
+    @GetMapping("/search/{nickname}")
+    public ApiResponse<MemberSearchResponse> searchMember(@PathVariable String nickname) {
+        Member member = memberService.searchMemberByNickname(nickname);
+
+        return ApiResponse.of(MemberSearchResponse.from(member), SuccessCode.GET_SUCCESS);
     }
 }

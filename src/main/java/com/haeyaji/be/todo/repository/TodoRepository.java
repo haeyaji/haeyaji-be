@@ -18,4 +18,7 @@ public interface TodoRepository extends JpaRepository<TodoEntity, UUID> {
     boolean existsByTodoDateAndSourceAndSourceRefId(LocalDate todoDate, TodoSource source, UUID sourceRefId);
 
     boolean existsByLabelId(UUID labelId);
+
+    /** 개인화 distill: 최근 AI 추천으로 담은 할 일(제목/장소를 recentSelections 근거로 사용). */
+    List<TodoEntity> findTop10ByMemberIdAndSourceOrderByCreatedAtDesc(UUID memberId, TodoSource source);
 }

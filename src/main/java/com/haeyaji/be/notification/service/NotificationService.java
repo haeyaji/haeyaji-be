@@ -24,16 +24,19 @@ public class NotificationService {
 
     public CursorPageResponse<Notification, UUID> getNotifications(UUID memberId, NotificationType type, UUID cursorId, int size) {
 
+        // hasNext, nextCursor 판단을 위해 size + 1만큼 조회
         List<Notification> notiList = notificationRepository.getNotifications(memberId, type, cursorId, size + 1);
 
         boolean hasNext = false;
         UUID nextCursor = null;
 
-        // hasNext, nextCursor 판단을 위해 size + 1만큼 조회
         if (notiList.size() == size + 1) {
-            nextCursor = notiList.get(size).getId();
             notiList.remove(size);
             hasNext = true;
+        }
+
+        if (!notiList.isEmpty()) {
+            nextCursor = notiList.getLast().getId();
         }
 
         return CursorPageResponse.of(notiList, nextCursor, hasNext);

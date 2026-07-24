@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -21,6 +22,10 @@ import java.util.UUID;
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
+
+    // Todo: 같은 refId로 여러 번 알림 발송하는 것이 정당한 경우는 멱등성 체크 제외
+    private static final Set<NotificationType> IDEMPOTENT_TYPES =
+            Set.of(NotificationType.TODO_REMINDER, NotificationType.MEETING_REMINDER, NotificationType.TODO_WEATHER_ALERT);
 
     public CursorPageResponse<Notification, UUID> getNotifications(UUID memberId, NotificationType type, UUID cursorId, int size) {
 
@@ -88,8 +93,9 @@ public class NotificationService {
             return null;  // 본인 행동으로 발생한 알림은 본인에게 안 보냄
         }
 
-        // 이미 같은 알림이 발송되었을 경우 return (멱등)
-        if (notificationRepository.existsByMemberIdAndTypeAndRefId(memberId, type, refId)) {
+        // 이미 같은 알림이 발송되었을 경우 return null (멱등)
+        if (IDEMPOTENT_TYPES.contains(type)
+                && notificationRepository.existsByMemberIdAndTypeAndRefId(memberId, type, refId)) {
             return null;
         }
 

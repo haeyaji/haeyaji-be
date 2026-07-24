@@ -3,6 +3,7 @@ package com.haeyaji.be.member.service;
 import com.haeyaji.be.common.exception.BusinessException;
 import com.haeyaji.be.common.exception.ErrorCode;
 import com.haeyaji.be.member.domain.Member;
+import com.haeyaji.be.member.domain.MemberStatus;
 import com.haeyaji.be.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -19,8 +20,15 @@ public class MemberService {
     private final MemberRepository memberRepository;
 
     public Member getMember(UUID memberId) {
-        return memberRepository.findById(memberId)
+        Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+
+        // 탈퇴한 회원은 존재하지 않는 것과 동일하게 취급
+        if (member.getStatus() == MemberStatus.WITHDRAWN) {
+            throw new BusinessException(ErrorCode.MEMBER_NOT_FOUND);
+        }
+
+        return member;
     }
 
     @Transactional
@@ -44,5 +52,18 @@ public class MemberService {
         } catch (DataIntegrityViolationException e) {
             throw new BusinessException(ErrorCode.DUPLICATE_NICKNAME);
         }
+    }
+
+    public Member searchMemberByNickname(String nickname) {
+
+        Member member = memberRepository.findByNickname(nickname)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+
+        // 탈퇴한 회원은 검색 결과에도 노출하지 않음
+        if (member.getStatus() == MemberStatus.WITHDRAWN) {
+            throw new BusinessException(ErrorCode.MEMBER_NOT_FOUND);
+        }
+
+        return member;
     }
 }

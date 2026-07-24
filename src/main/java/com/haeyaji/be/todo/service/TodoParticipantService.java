@@ -2,6 +2,7 @@ package com.haeyaji.be.todo.service;
 
 import com.haeyaji.be.common.exception.BusinessException;
 import com.haeyaji.be.common.exception.ErrorCode;
+import com.haeyaji.be.friend.repository.FriendRepository;
 import com.haeyaji.be.todo.domain.InviteStatus;
 import com.haeyaji.be.todo.domain.ParticipantRole;
 import com.haeyaji.be.todo.domain.Todo;
@@ -29,6 +30,7 @@ public class TodoParticipantService {
 
     private final TodoParticipantRepository participantRepository;
     private final TodoRepository todoRepository;
+    private final FriendRepository friendRepository;
 
     @Transactional
     public List<TodoParticipant> share(UUID ownerId, UUID todoId, TodoShareRequest request) {
@@ -49,6 +51,9 @@ public class TodoParticipantService {
             throw new BusinessException(ErrorCode.INVALID_PARAMETER);
         }
         if (participantRepository.existsByTodoIdAndMemberId(todoId, member.memberId())) {
+            throw new BusinessException(ErrorCode.INVALID_PARAMETER);
+        }
+        if (!friendRepository.existsAcceptedBetween(ownerId, member.memberId())) {
             throw new BusinessException(ErrorCode.INVALID_PARAMETER);
         }
         return TodoParticipantEntity.invite(todoId, member.memberId(), member.role());
@@ -127,4 +132,5 @@ public class TodoParticipantService {
                 .filter(p -> p.getInviteStatus() == InviteStatus.ACCEPTED)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
     }
+    
 }

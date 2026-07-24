@@ -1,6 +1,7 @@
 package com.haeyaji.be.common.response;
 
 import java.util.List;
+import java.util.function.Function;
 
 /**
  * 커서 페이지네이션 응답 객체.
@@ -24,5 +25,10 @@ public record CursorPageResponse<T, C>(
      */
     public static <T, C> CursorPageResponse<T, C> of(List<T> content, C nextCursor, boolean hasNext) {
         return new CursorPageResponse<>(content, nextCursor, hasNext);
+    }
+
+    // CursorPageResponse 안의 content를 entity -> response로 매핑하는 메서드
+    public <R> CursorPageResponse<R, C> map(Function<T, R> mapper) {
+        return new CursorPageResponse<>(content.stream().map(mapper).toList(), nextCursor, hasNext);
     }
 }

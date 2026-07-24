@@ -49,7 +49,7 @@ public class MeetingEventListener {
                         event.shareToken()
                 );
             } catch (Exception e) { // 500에러 터질 시 알림 발송 전체적으로 이루어지지 않을 수 있음
-                log.error("MEETING_INVITE 알림 발송 실패: meetingId={}, inviteeId={}", event.meetingId(), participantId, e);
+                log.error("MEETING_CONFIRMED 알림 발송 실패: meetingId={}, participantId={}", event.meetingId(), participantId, e);
             }
 
         }

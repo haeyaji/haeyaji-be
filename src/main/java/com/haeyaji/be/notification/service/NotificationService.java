@@ -80,7 +80,6 @@ public class NotificationService {
         notificationRepository.delete(noti);
     }
 
-     //
     @Transactional
     public Notification send(UUID actorId, UUID memberId, NotificationCategory category, NotificationType type,
                               String title, String body, UUID refId) {

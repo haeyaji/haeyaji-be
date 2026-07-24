@@ -1,6 +1,5 @@
 package com.haeyaji.be.notification.controller;
 
-import com.haeyaji.be.common.exception.ResponseCode;
 import com.haeyaji.be.common.response.ApiResponse;
 import com.haeyaji.be.common.response.CursorPageResponse;
 import com.haeyaji.be.common.response.SuccessCode;

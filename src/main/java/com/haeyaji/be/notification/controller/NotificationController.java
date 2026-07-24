@@ -64,7 +64,7 @@ public class NotificationController {
 
         notificationService.markAsRead(id, userDetails.getMemberId());
 
-        return ApiResponse.of(null, SuccessCode.POST_SUCCESS);
+        return ApiResponse.of(null, SuccessCode.PUT_SUCCESS);
     }
 
     @PostMapping("/read-all")
@@ -72,7 +72,7 @@ public class NotificationController {
 
         notificationService.markAllAsRead(userDetails.getMemberId());
 
-        return ApiResponse.of(null, SuccessCode.POST_SUCCESS);
+        return ApiResponse.of(null, SuccessCode.PUT_SUCCESS);
     }
 
     @DeleteMapping("/{id}")

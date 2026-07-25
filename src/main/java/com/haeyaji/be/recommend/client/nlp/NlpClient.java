@@ -21,7 +21,8 @@ import java.time.Duration;
 public class NlpClient {
 
     private static final String MESSAGE_PATH = "/api/message";
-    private static final Duration TIMEOUT = Duration.ofSeconds(20);
+    // 2단계 실측 ~12.8초 + userProfile/history 실리면 7.8b 생성이 더 느려져 20초를 넘김 → 45초로 여유 확보(#59).
+    private static final Duration TIMEOUT = Duration.ofSeconds(45);
 
     private final WebClient webClient;
 

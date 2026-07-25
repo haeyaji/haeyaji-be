@@ -51,7 +51,7 @@ public class TodoController {
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
     ) {
         var tasks = todoService.getTodosByDate(userDetails.getMemberId(), date).stream()
-                .map(TodoResponse::from)
+                .map(v -> TodoResponse.from(v.todo(), v.sharedRole()))
                 .toList();
         return ApiResponse.of(TodoListResponse.from(tasks), SuccessCode.GET_SUCCESS);
     }

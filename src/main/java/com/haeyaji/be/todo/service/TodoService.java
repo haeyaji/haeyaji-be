@@ -10,6 +10,7 @@ import com.haeyaji.be.todo.domain.TodoSource;
 import com.haeyaji.be.todo.dto.TodoRequest;
 import com.haeyaji.be.todo.dto.TodoUpdateRequest;
 import com.haeyaji.be.todo.repository.TodoEntity;
+import com.haeyaji.be.todo.repository.TodoParticipantEntity;
 import com.haeyaji.be.todo.repository.TodoParticipantRepository;
 import com.haeyaji.be.todo.repository.TodoRepository;
 import lombok.RequiredArgsConstructor;
@@ -20,9 +21,13 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -37,10 +42,30 @@ public class TodoService {
     private final LabelRepository labelRepository;
     private final Clock clock;
 
-    public List<Todo> getTodosByDate(UUID memberId, LocalDate date) {
-        return todoRepository.findByMemberIdAndTodoDateOrderByPinnedDescSortOrderAscCreatedAtAsc(memberId, date).stream()
-                .map(TodoEntity::toDomain)
-                .toList();
+    /** 캘린더 정렬: 고정(pinned) 먼저 → sortOrder → 생성순. 내 소유·공유받은 것을 한 목록에 합쳐 정렬한다. */
+    private static final Comparator<TodoView> DISPLAY_ORDER =
+            Comparator.comparing((TodoView v) -> v.todo().pinned(), Comparator.reverseOrder())
+                    .thenComparingInt(v -> v.todo().sortOrder())
+                    .thenComparing(v -> v.todo().createdAt(), Comparator.nullsLast(Comparator.naturalOrder()));
+
+    /**
+     * 선택 날짜의 할 일 = 내가 소유한 것 + 내가 수락(ACCEPTED)한 공유 할 일 중 그 날짜 것.
+     * 공유 할 일은 행이 1개(소유자 것)라 완료 상태도 공동으로 공유된다(공동 완료). {@code sharedRole}로 소유/공유·권한을 구분.
+     */
+    public List<TodoView> getTodosByDate(UUID memberId, LocalDate date) {
+        List<TodoView> result = new ArrayList<>();
+        todoRepository.findByMemberIdAndTodoDateOrderByPinnedDescSortOrderAscCreatedAtAsc(memberId, date)
+                .forEach(e -> result.add(TodoView.owned(e.toDomain())));
+
+        Map<UUID, ParticipantRole> roleByTodoId = todoParticipantRepository
+                .findByMemberIdAndInviteStatus(memberId, InviteStatus.ACCEPTED).stream()
+                .collect(Collectors.toMap(TodoParticipantEntity::getTodoId, TodoParticipantEntity::getRole, (a, b) -> a));
+        if (!roleByTodoId.isEmpty()) {
+            todoRepository.findByIdInAndTodoDate(roleByTodoId.keySet(), date)
+                    .forEach(e -> result.add(TodoView.shared(e.toDomain(), roleByTodoId.get(e.getId()))));
+        }
+        result.sort(DISPLAY_ORDER);
+        return result;
     }
 
     @Transactional

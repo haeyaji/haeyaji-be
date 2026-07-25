@@ -112,9 +112,21 @@ public class TodoParticipantService {
         participantRepository.delete(participant);
     }
 
-    /** SHARE-8. ACCEPTED 상태인 것만 포함 — PENDING 초대는 별도 알림 흐름 몫. */
+    /** SHARE-8. ACCEPTED 상태인 것만 포함 — PENDING 초대는 {@link #getPendingInvitations}로 조회. */
     public List<Todo> getSharedTodos(UUID memberId) {
-        List<UUID> todoIds = participantRepository.findByMemberIdAndInviteStatus(memberId, InviteStatus.ACCEPTED).stream()
+        return findInvitedTodos(memberId, InviteStatus.ACCEPTED);
+    }
+
+    /**
+     * 내가 받은 PENDING 초대 목록. 알림 UI/REST가 아직 없어 초대를 발견할 경로가 없으므로,
+     * 초대받은 쪽이 수락/거절 전에 대기 초대를 조회하는 진입점(#59).
+     */
+    public List<Todo> getPendingInvitations(UUID memberId) {
+        return findInvitedTodos(memberId, InviteStatus.PENDING);
+    }
+
+    private List<Todo> findInvitedTodos(UUID memberId, InviteStatus inviteStatus) {
+        List<UUID> todoIds = participantRepository.findByMemberIdAndInviteStatus(memberId, inviteStatus).stream()
                 .map(TodoParticipantEntity::getTodoId)
                 .toList();
         return todoRepository.findAllById(todoIds).stream()

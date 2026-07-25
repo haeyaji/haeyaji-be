@@ -37,6 +37,7 @@ import java.util.UUID;
  * DELETE /api/todos/{id}/participants/{memberId}   SHARE-5, owner 전용
  * POST   /api/todos/{id}/leave                     SHARE-6, 참여자 본인
  * GET    /api/todos/shared                         SHARE-8, ACCEPTED인 것만
+ * GET    /api/todos/invitations                    받은 PENDING 초대 목록(수락 전 발견용, #59)
  * </pre>
  */
 @RestController
@@ -121,6 +122,15 @@ public class TodoParticipantController {
     @GetMapping("/shared")
     public ApiResponse<List<TodoResponse>> getSharedTodos(@AuthenticationPrincipal CustomUserDetails userDetails) {
         var todos = participantService.getSharedTodos(userDetails.getMemberId()).stream()
+                .map(TodoResponse::from)
+                .toList();
+        return ApiResponse.of(todos, SuccessCode.GET_SUCCESS);
+    }
+
+    /** 받은 PENDING 초대 목록(#59). 알림 UI가 없어도 초대를 발견해 accept/reject 할 수 있게 한다. */
+    @GetMapping("/invitations")
+    public ApiResponse<List<TodoResponse>> getPendingInvitations(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        var todos = participantService.getPendingInvitations(userDetails.getMemberId()).stream()
                 .map(TodoResponse::from)
                 .toList();
         return ApiResponse.of(todos, SuccessCode.GET_SUCCESS);

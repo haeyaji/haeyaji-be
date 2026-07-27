@@ -1,0 +1,80 @@
+# 테스트 전용 설정 — 개발 DB·Redis를 오염시키지 않도록 완전히 분리한다.
+#
+# 왜 H2가 아니라 MySQL인가: 개인화 가중치 upsert가 MySQL 전용 문법
+# (INSERT ... ON DUPLICATE KEY UPDATE)이라 H2에서는 검증이 불가능하다.
+# 실행 전 준비(1회): docker exec haeyaji-mysql mysql -uroot -p -e \
+#   "CREATE DATABASE IF NOT EXISTS haeyaji_test; GRANT ALL ON haeyaji_test.* TO 'haeyaji'@'%';"
+spring:
+  # application-secret.yml은 import하지 않는다 — 실 키가 테스트로 새는 것도 막고,
+  # secret의 kakao client-secret만 들어와 client-id 없는 반쪽 OAuth 등록이 생기는 것도 막는다.
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3316}/haeyaji_test?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useUnicode=true&allowPublicKeyRetrieval=true&useSSL=false
+    username: ${MYSQL_USER:haeyaji}
+    password: ${MYSQL_PASSWORD:haeyaji12!@}
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      # 테스트마다 스키마를 새로 만들고 끝나면 지운다 — 잔재가 다음 실행에 영향을 주지 않게.
+      ddl-auto: create-drop
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6389}
+      # 개발용(0)과 다른 논리 DB — pub/sub 테스트가 실제 사용자 채널과 섞이지 않는다.
+      database: 1
+
+  # 컨텍스트 로딩용 더미 — provider 정보를 Spring이 아는 표준 제공자(google)를 써서 설정을 최소화한다.
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: test-client-id
+            client-secret: test-client-secret
+
+jwt:
+  secret: test-secret-key-for-unit-tests-only-do-not-use-in-production-0123456789
+  access-token-validity-ms: 60000
+  refresh-token-validity-ms: 300000
+
+app:
+  frontend:
+    callback-url: http://localhost:5173/oauth/callback
+
+haeyaji:
+  cors:
+    allowed-origins: http://localhost:5173
+  # 테스트가 실제 메일을 쏘면 안 된다.
+  mail:
+    base-url: https://api.resend.com
+    enabled: false
+    api-key: ""
+    from: no-reply@ascode.click
+    from-name: 해야지
+  nlp:
+    base-url: http://localhost:8000
+  kakao:
+    rest-key: ""
+    base-url: https://dapi.kakao.com
+  weather:
+    kma:
+      auth-key: ""
+      cache-ttl-minutes: 30
+      base-url: https://apihub.kma.go.kr/api/typ02/openApi/VilageFcstInfoService_2.0
+      mid:
+        land-base-url: https://apihub.kma.go.kr/api/typ02/openApi/MidFcstInfoService
+        ta-base-url: https://apihub.kma.go.kr/api/typ01/url
+    datakr:
+      service-key: ""
+    uv:
+      base-url: https://apis.data.go.kr/1360000/LivingWthrIdxServiceV5
+    airquality:
+      base-url: https://apis.data.go.kr/B552584/ArpltnInforInqireSvc
+      station-base-url: https://apis.data.go.kr/B552584/MsrstnInfoInqireSvc
+
+logging:
+  level:
+    org.hibernate.SQL: WARN
+    org.hibernate.orm.jdbc.bind: WARN

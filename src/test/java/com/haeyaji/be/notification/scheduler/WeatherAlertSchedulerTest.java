@@ -1,6 +1,7 @@
 package com.haeyaji.be.notification.scheduler;
 
 import com.haeyaji.be.notification.domain.NotificationType;
+import com.haeyaji.be.notification.mail.ReminderMailer;
 import com.haeyaji.be.notification.service.NotificationService;
 import com.haeyaji.be.todo.domain.TodoSource;
 import com.haeyaji.be.todo.repository.TodoEntity;
@@ -49,7 +50,8 @@ class WeatherAlertSchedulerTest {
         weatherService = mock(WeatherService.class);
         notificationService = mock(NotificationService.class);
         Clock clock = Clock.fixed(Instant.parse("2026-07-26T22:00:00Z"), KST); // KST 07:00
-        scheduler = new WeatherAlertScheduler(todoRepository, weatherService, notificationService, clock);
+        scheduler = new WeatherAlertScheduler(todoRepository, weatherService, notificationService,
+                mock(ReminderMailer.class), clock);
     }
 
     private TodoEntity outdoorTodo(String title) {

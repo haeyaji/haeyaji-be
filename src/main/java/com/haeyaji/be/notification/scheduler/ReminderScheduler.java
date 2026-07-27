@@ -5,8 +5,10 @@ import com.haeyaji.be.meeting.repository.MeetingEntity;
 import com.haeyaji.be.meeting.repository.MeetingParticipantEntity;
 import com.haeyaji.be.meeting.repository.MeetingParticipantRepository;
 import com.haeyaji.be.meeting.repository.MeetingRepository;
+import com.haeyaji.be.notification.domain.Notification;
 import com.haeyaji.be.notification.domain.NotificationCategory;
 import com.haeyaji.be.notification.domain.NotificationType;
+import com.haeyaji.be.notification.mail.ReminderMailer;
 import com.haeyaji.be.notification.service.NotificationService;
 import com.haeyaji.be.todo.domain.InviteStatus;
 import com.haeyaji.be.todo.domain.TodoSource;
@@ -62,6 +64,7 @@ public class ReminderScheduler {
     private final MeetingRepository meetingRepository;
     private final MeetingParticipantRepository meetingParticipantRepository;
     private final NotificationService notificationService;
+    private final ReminderMailer reminderMailer;
     private final Clock clock;
 
     /** 5분마다 훑는다 — 리드타임(30분/1시간)보다 촘촘해야 알림이 늦지 않는다. */
@@ -100,8 +103,13 @@ public class ReminderScheduler {
             targets.add(todo.getMemberId());
             targets.addAll(participantsByTodo.getOrDefault(todo.getId(), List.of()));
             for (UUID memberId : targets) {
-                send(memberId, NotificationCategory.TODO, NotificationType.TODO_REMINDER,
+                boolean created = send(memberId, NotificationCategory.TODO, NotificationType.TODO_REMINDER,
                         todo.getTitle(), body, todo.getId(), null);
+                if (created) {
+                    // 이번 주기에 새로 만들어진 알림만 메일로 나간다(재실행 때 다시 보내지 않게).
+                    reminderMailer.send(memberId, todo.getTitle(), todo.getStartTime(),
+                            todo.getPlaceName(), null);
+                }
             }
         }
     }
@@ -141,13 +149,21 @@ public class ReminderScheduler {
         }
     }
 
-    /** 한 사람의 발송 실패가 나머지 대상을 막지 않게 한다 — 배치는 끝까지 도는 게 우선. */
-    private void send(UUID memberId, NotificationCategory category, NotificationType type,
-                      String title, String body, UUID refId, String linkToken) {
+    /**
+     * 한 사람의 발송 실패가 나머지 대상을 막지 않게 한다 — 배치는 끝까지 도는 게 우선.
+     *
+     * @return 이번 호출로 알림이 <b>새로 만들어졌으면</b> true. 이미 보낸 건이라 걸러졌거나 실패했으면 false —
+     *         메일을 이 값으로 가늠해 5분마다 같은 메일이 나가는 걸 막는다.
+     */
+    private boolean send(UUID memberId, NotificationCategory category, NotificationType type,
+                         String title, String body, UUID refId, String linkToken) {
         try {
-            notificationService.sendSystem(memberId, category, type, title, body, refId, linkToken);
+            Notification created =
+                    notificationService.sendSystem(memberId, category, type, title, body, refId, linkToken);
+            return created != null;
         } catch (Exception e) {
             log.error("{} 알림 발송 실패: refId={}, memberId={}", type, refId, memberId, e);
+            return false;
         }
     }
 }

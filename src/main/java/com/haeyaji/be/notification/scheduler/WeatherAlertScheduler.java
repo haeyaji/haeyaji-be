@@ -1,7 +1,9 @@
 package com.haeyaji.be.notification.scheduler;
 
+import com.haeyaji.be.notification.domain.Notification;
 import com.haeyaji.be.notification.domain.NotificationCategory;
 import com.haeyaji.be.notification.domain.NotificationType;
+import com.haeyaji.be.notification.mail.ReminderMailer;
 import com.haeyaji.be.notification.service.NotificationService;
 import com.haeyaji.be.todo.domain.TodoStatus;
 import com.haeyaji.be.todo.repository.TodoEntity;
@@ -41,6 +43,7 @@ public class WeatherAlertScheduler {
     private final TodoRepository todoRepository;
     private final WeatherService weatherService;
     private final NotificationService notificationService;
+    private final ReminderMailer reminderMailer;
     private final Clock clock;
 
     // 주기를 설정으로 뺀 이유: 배치는 하루 한 번만 도는 탓에 손으로 확인할 방법이 없다.
@@ -68,8 +71,13 @@ public class WeatherAlertScheduler {
         String body = "%s 예보예요. %s 일정을 확인해 보세요.".formatted(
                 weather.condKo() == null ? label(weather.cond()) : weather.condKo(),
                 todo.getPlaceName() == null ? "오늘" : todo.getPlaceName());
-        notificationService.sendSystem(todo.getMemberId(), NotificationCategory.TODO,
+        Notification created = notificationService.sendSystem(todo.getMemberId(), NotificationCategory.TODO,
                 NotificationType.TODO_WEATHER_ALERT, todo.getTitle(), body, todo.getId(), null);
+        if (created == null) {
+            return; // 이미 오늘 보낸 일정 — 메일도 다시 보내지 않는다
+        }
+        reminderMailer.send(todo.getMemberId(), todo.getTitle(), todo.getStartTime(),
+                todo.getPlaceName(), body);
     }
 
     /** 우산·일정 변경을 부를 만한 날씨만 알린다 — 흐림까지 알리면 알림이 무뎌진다. */

@@ -51,9 +51,22 @@ public class TodoService {
     /**
      * 선택 날짜의 할 일 = 내가 소유한 것 + 내가 수락(ACCEPTED)한 공유 할 일 중 그 날짜 것.
      * 공유 할 일은 행이 1개(소유자 것)라 완료 상태도 공동으로 공유된다(공동 완료). {@code sharedRole}로 소유/공유·권한을 구분.
+     *
+     * @param labelId 라벨 필터(선택). 지정하면 <b>내 소유 할 일만</b> 그 라벨로 거른다 — 공유받은 할 일의
+     *                {@code label_id}는 소유자의 라벨이라 내 라벨 체계와 무관하고, 남의 라벨을 내 필터에
+     *                노출하면 라벨명이 새기 때문이다. 내 라벨이 아니면 404(존재 여부도 숨긴다).
      */
-    public List<TodoView> getTodosByDate(UUID memberId, LocalDate date) {
+    public List<TodoView> getTodosByDate(UUID memberId, LocalDate date, UUID labelId) {
         List<TodoView> result = new ArrayList<>();
+        if (labelId != null) {
+            requireOwnedLabel(memberId, labelId);
+            todoRepository.findByMemberIdAndTodoDateAndLabelIdOrderByPinnedDescSortOrderAscCreatedAtAsc(
+                            memberId, date, labelId)
+                    .forEach(e -> result.add(TodoView.owned(e.toDomain())));
+            result.sort(DISPLAY_ORDER);
+            return result; // 라벨 필터 시 공유 항목은 대상 밖
+        }
+
         todoRepository.findByMemberIdAndTodoDateOrderByPinnedDescSortOrderAscCreatedAtAsc(memberId, date)
                 .forEach(e -> result.add(TodoView.owned(e.toDomain())));
 

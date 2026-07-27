@@ -27,7 +27,7 @@ public class MeetingEventListener {
                 notificationService.send(
                         event.inviterMemberId(), inviteeId,
                         NotificationCategory.INVITE, NotificationType.MEETING_INVITE,
-                        event.meetingTitle(), "eventbody", event.meetingId(),
+                        event.meetingTitle(), "약속에 초대되었습니다.", event.meetingId(),
                         event.shareToken()
                 );
             } catch (Exception e) { // 500에러 터질 시 알림 발송 전체적으로 이루어지지 않을 수 있음
@@ -43,10 +43,11 @@ public class MeetingEventListener {
             try {
                 // MeetingInvitedEvent와 다르게 MeetingConfirmedEvent에는 actor(inviter)가 없음
                 // send() 대신 sendSystem으로 알림 발송
+                String body = "약속이 확정되었습니다: " + event.confirmedStartAt() + "~" + event.confirmedEndAt();
                 notificationService.sendSystem(
                         participantId,
                         NotificationCategory.INVITE, NotificationType.MEETING_CONFIRMED,
-                        event.meetingTitle(), "eventbody", event.meetingId(),
+                        event.meetingTitle(), body, event.meetingId(),
                         event.shareToken()
                 );
             } catch (Exception e) { // 500에러 터질 시 알림 발송 전체적으로 이루어지지 않을 수 있음

@@ -7,6 +7,7 @@ import com.haeyaji.be.notification.domain.NotificationType;
 import com.haeyaji.be.notification.service.NotificationService;
 import com.haeyaji.be.todo.domain.TodoRespondedEvent;
 import com.haeyaji.be.todo.domain.TodoSharedEvent;
+import com.haeyaji.be.todo.domain.TodoUpdatedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -51,6 +52,22 @@ public class TodoEventListener {
             );
         } catch (Exception e) {
             log.error("SHARE_INVITE_RESPONSE 알림 발송 실패: todoId={}, ownerId={}", event.todoId(), event.ownerId(), e);
+        }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onUpdated(TodoUpdatedEvent event) {
+        String actorNickname = resolveNickname(event.actorId());
+        for (UUID recipientId : event.recipientMemberIds()) {
+            try {
+                notificationService.send(
+                        event.actorId(), recipientId,
+                        NotificationCategory.TODO, NotificationType.TODO_SHARED_UPDATED,
+                        event.todoTitle(), actorNickname + "님이 할 일을 수정했습니다.", event.todoId()
+                );
+            } catch (Exception e) {
+                log.error("TODO_SHARED_UPDATED 알림 발송 실패: todoId={}, recipientId={}", event.todoId(), recipientId, e);
+            }
         }
     }
 

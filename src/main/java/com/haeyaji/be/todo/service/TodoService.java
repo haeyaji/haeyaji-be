@@ -7,6 +7,7 @@ import com.haeyaji.be.todo.domain.InviteStatus;
 import com.haeyaji.be.todo.domain.ParticipantRole;
 import com.haeyaji.be.todo.domain.Todo;
 import com.haeyaji.be.todo.domain.TodoSource;
+import com.haeyaji.be.todo.domain.TodoUpdatedEvent;
 import com.haeyaji.be.todo.dto.TodoRequest;
 import com.haeyaji.be.todo.dto.TodoUpdateRequest;
 import com.haeyaji.be.todo.repository.TodoEntity;
@@ -14,6 +15,7 @@ import com.haeyaji.be.todo.repository.TodoParticipantEntity;
 import com.haeyaji.be.todo.repository.TodoParticipantRepository;
 import com.haeyaji.be.todo.repository.TodoRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,6 +43,7 @@ public class TodoService {
     private final TodoParticipantRepository todoParticipantRepository;
     private final LabelRepository labelRepository;
     private final Clock clock;
+    private final ApplicationEventPublisher eventPublisher;
 
     /** 캘린더 정렬: 고정(pinned) 먼저 → sortOrder → 생성순. 내 소유·공유받은 것을 한 목록에 합쳐 정렬한다. */
     private static final Comparator<TodoView> DISPLAY_ORDER =
@@ -116,6 +119,20 @@ public class TodoService {
         if (request.completed() != null) {
             entity.setCompleted(request.completed(), LocalDateTime.now(clock));
         }
+
+        // 알림(noti) 연계 지점 — 수정한 사람을 제외한 owner + 나머지 참여자에게 알림
+        List<UUID> recipients = new ArrayList<>(todoParticipantRepository.findByTodoId(id).stream()
+                .filter(p -> p.getInviteStatus() == InviteStatus.ACCEPTED)
+                .map(TodoParticipantEntity::getMemberId)
+                .filter(participantId -> !participantId.equals(memberId))
+                .toList());
+        if (!entity.getMemberId().equals(memberId)) {
+            recipients.add(entity.getMemberId());
+        }
+        if (!recipients.isEmpty()) {
+            eventPublisher.publishEvent(new TodoUpdatedEvent(id, entity.getTitle(), memberId, recipients));
+        }
+
         return entity.toDomain();
     }
 

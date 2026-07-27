@@ -7,12 +7,15 @@ import com.haeyaji.be.todo.domain.InviteStatus;
 import com.haeyaji.be.todo.domain.ParticipantRole;
 import com.haeyaji.be.todo.domain.Todo;
 import com.haeyaji.be.todo.domain.TodoParticipant;
+import com.haeyaji.be.todo.domain.TodoShareRespondedEvent;
+import com.haeyaji.be.todo.domain.TodoSharedEvent;
 import com.haeyaji.be.todo.dto.TodoShareRequest;
 import com.haeyaji.be.todo.repository.TodoEntity;
 import com.haeyaji.be.todo.repository.TodoParticipantEntity;
 import com.haeyaji.be.todo.repository.TodoParticipantRepository;
 import com.haeyaji.be.todo.repository.TodoRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,16 +34,22 @@ public class TodoParticipantService {
     private final TodoParticipantRepository participantRepository;
     private final TodoRepository todoRepository;
     private final FriendRepository friendRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public List<TodoParticipant> share(UUID ownerId, UUID todoId, TodoShareRequest request) {
-        requireOwnedTodo(ownerId, todoId);
+        TodoEntity todo = requireOwnedTodo(ownerId, todoId);
         List<TodoParticipantEntity> invited = request.members().stream()
                 .map(member -> inviteOne(todoId, ownerId, member))
                 .toList();
-        return participantRepository.saveAll(invited).stream()
+        List<TodoParticipant> saved = participantRepository.saveAll(invited).stream()
                 .map(TodoParticipantEntity::toDomain)
                 .toList();
+        if (!saved.isEmpty()) {
+            eventPublisher.publishEvent(new TodoSharedEvent(todoId, todo.getTitle(), ownerId,
+                    saved.stream().map(TodoParticipant::memberId).toList()));
+        }
+        return saved;
     }
 
     private TodoParticipantEntity inviteOne(UUID todoId, UUID ownerId, TodoShareRequest.ShareMember member) {
@@ -71,6 +80,9 @@ public class TodoParticipantService {
         } else {
             participant.reject();
         }
+        // 주인은 초대 결과를 따로 조회할 화면이 없어 알림으로만 알 수 있다.
+        todoRepository.findById(todoId).ifPresent(todo -> eventPublisher.publishEvent(
+                new TodoShareRespondedEvent(todoId, todo.getTitle(), todo.getMemberId(), memberId, accept)));
         return participant.toDomain();
     }
 

@@ -5,6 +5,7 @@ import com.haeyaji.be.common.exception.ErrorCode;
 import com.haeyaji.be.label.repository.LabelRepository;
 import com.haeyaji.be.todo.domain.InviteStatus;
 import com.haeyaji.be.todo.domain.ParticipantRole;
+import com.haeyaji.be.todo.domain.SharedTodoUpdatedEvent;
 import com.haeyaji.be.todo.domain.Todo;
 import com.haeyaji.be.todo.domain.TodoSource;
 import com.haeyaji.be.todo.dto.TodoRequest;
@@ -14,6 +15,7 @@ import com.haeyaji.be.todo.repository.TodoParticipantEntity;
 import com.haeyaji.be.todo.repository.TodoParticipantRepository;
 import com.haeyaji.be.todo.repository.TodoRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,6 +42,7 @@ public class TodoService {
     private final TodoRepository todoRepository;
     private final TodoParticipantRepository todoParticipantRepository;
     private final LabelRepository labelRepository;
+    private final ApplicationEventPublisher eventPublisher;
     private final Clock clock;
 
     /** 캘린더 정렬: 고정(pinned) 먼저 → sortOrder → 생성순. 내 소유·공유받은 것을 한 목록에 합쳐 정렬한다. */
@@ -158,7 +161,39 @@ public class TodoService {
         if (request.completed() != null) {
             entity.setCompleted(request.completed(), LocalDateTime.now(clock));
         }
+        if (isNotable(request)) {
+            publishSharedUpdate(entity, memberId);
+        }
         return entity.toDomain();
+    }
+
+    /**
+     * 알릴 만한 변경인지 — 고정·정렬만 바뀐 건 <b>보는 사람마다 다른 화면 배치</b>일 뿐이라 알리지 않는다.
+     * 목록을 드래그로 재정렬할 때마다 상대에게 알림이 가면 알림함이 금세 쓸모없어진다.
+     */
+    private static boolean isNotable(TodoUpdateRequest request) {
+        return request.date() != null || request.title() != null || request.time() != null
+                || request.placeName() != null || request.placeUrl() != null
+                || request.lat() != null || request.lng() != null
+                || request.labelId() != null || request.completed() != null;
+    }
+
+    /**
+     * 공유 중인 할 일이 바뀌었음을 관련자에게 알린다 — 남이 내 일정을 고쳐도 모르고 지나가는 걸 막는다.
+     * <p>수락한 참여자가 없으면(혼자 쓰는 할 일) 발행하지 않는다. 수정한 본인 제외는 알림 쪽에서 한다.
+     */
+    private void publishSharedUpdate(TodoEntity entity, UUID actorId) {
+        List<UUID> accepted = todoParticipantRepository.findByTodoId(entity.getId()).stream()
+                .filter(p -> p.getInviteStatus() == InviteStatus.ACCEPTED)
+                .map(TodoParticipantEntity::getMemberId)
+                .toList();
+        if (accepted.isEmpty()) {
+            return;
+        }
+        List<UUID> audience = new ArrayList<>(accepted);
+        audience.add(entity.getMemberId()); // 주인도 수정 사실을 알아야 한다
+        eventPublisher.publishEvent(
+                new SharedTodoUpdatedEvent(entity.getId(), entity.getTitle(), actorId, audience));
     }
 
     /**

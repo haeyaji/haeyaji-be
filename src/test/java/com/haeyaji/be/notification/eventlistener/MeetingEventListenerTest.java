@@ -23,7 +23,7 @@ class MeetingEventListenerTest {
         NotificationRepository notificationRepository = mock(NotificationRepository.class);
         NotificationRedisPublisher notificationRedisPublisher = mock(NotificationRedisPublisher.class);
         NotificationService notificationService = new NotificationService(notificationRepository, notificationRedisPublisher);
-        MeetingEventListener listener = new MeetingEventListener(notificationService);
+        MeetingEventListener listener = new MeetingEventListener(notificationService, mock(ActorNameResolver.class));
 
         UUID meetingId = UUID.randomUUID();
         UUID inviterId = UUID.randomUUID();
@@ -49,7 +49,7 @@ class MeetingEventListenerTest {
         NotificationRepository notificationRepository = mock(NotificationRepository.class);
         NotificationRedisPublisher notificationRedisPublisher = mock(NotificationRedisPublisher.class);
         NotificationService notificationService = new NotificationService(notificationRepository, notificationRedisPublisher);
-        MeetingEventListener listener = new MeetingEventListener(notificationService);
+        MeetingEventListener listener = new MeetingEventListener(notificationService, mock(ActorNameResolver.class));
 
         List<UUID> invitees = List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
         MeetingInvitedEvent event = new MeetingInvitedEvent(

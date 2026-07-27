@@ -1,5 +1,6 @@
 package com.haeyaji.be.weather.client.airquality;
 
+import com.haeyaji.be.common.cache.RedisCacheStore;
 import com.haeyaji.be.weather.domain.AirQuality;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -40,6 +41,10 @@ public class AirKoreaClient {
     private static final Duration MEASURE_TTL = Duration.ofMinutes(60);
     /** 측정소 위치는 거의 안 변함 → 24시간 캐시. */
     private static final Duration STATION_TTL = Duration.ofHours(24);
+    /** 상류 실패를 짧게 기억한다 — 실패할 때마다 매 요청이 8초씩 재시도하는 걸 막는다. */
+    private static final Duration FAILURE_TTL = Duration.ofMinutes(5);
+    private static final String MEASURE_KEY = "air:v1:measures:nationwide";
+    private static final String STATION_KEY = "air:v1:stations";
     private static final String SIDO_ALL = "전국";
     private static final int NUM_OF_ROWS = 1000;
     /** 최근접 탐색 시 결측 대비 후보 수. */
@@ -49,10 +54,10 @@ public class AirKoreaClient {
     private final WebClient stationClient;
     private final ObjectMapper objectMapper;
     private final String serviceKey;
-    private final AtomicReference<MeasureCache> measureCache = new AtomicReference<>();
-    private final AtomicReference<StationCache> stationCache = new AtomicReference<>();
+    private final RedisCacheStore cacheStore;
 
     public AirKoreaClient(ObjectMapper objectMapper,
+                          RedisCacheStore cacheStore,
                           @Value("${haeyaji.weather.airquality.base-url}") String baseUrl,
                           @Value("${haeyaji.weather.airquality.station-base-url}") String stationBaseUrl,
                           @Value("${haeyaji.weather.datakr.service-key:}") String serviceKey) {
@@ -66,6 +71,7 @@ public class AirKoreaClient {
                 .codecs(c -> c.defaultCodecs().maxInMemorySize(2 * 1024 * 1024))
                 .build();
         this.objectMapper = objectMapper;
+        this.cacheStore = cacheStore;
         this.serviceKey = serviceKey;
     }
 
@@ -132,9 +138,9 @@ public class AirKoreaClient {
     // ---------- 전국 실측 캐시 ----------
 
     private JsonNode nationwideMeasures() {
-        MeasureCache cached = measureCache.get();
-        if (cached != null && cached.expiresAt().isAfter(Instant.now())) {
-            return cached.items();
+        JsonNode cached = cacheStore.get(MEASURE_KEY, JsonNode.class);
+        if (cached != null) {
+            return cached;
         }
         JsonNode fetched = fetchJsonItems(measureClient, "/getCtprvnRltmMesureDnsty", uri -> uri
                 .queryParam("returnType", "json")
@@ -143,7 +149,7 @@ public class AirKoreaClient {
                 .queryParam("sidoName", SIDO_ALL)
                 .queryParam("ver", "1.5"));
         if (fetched != null) {
-            measureCache.set(new MeasureCache(fetched, Instant.now().plus(MEASURE_TTL)));
+            cacheStore.put(MEASURE_KEY, fetched, MEASURE_TTL);
         }
         return fetched;
     }
@@ -151,9 +157,10 @@ public class AirKoreaClient {
     // ---------- 측정소 좌표 캐시 ----------
 
     private List<Station> stationsWithCoords() {
-        StationCache cached = stationCache.get();
-        if (cached != null && cached.expiresAt().isAfter(Instant.now())) {
-            return cached.stations();
+        JsonNode cached = cacheStore.get(STATION_KEY, JsonNode.class);
+        if (cached != null) {
+            // 실패를 기억한 경우(빈 배열)에는 상류를 다시 때리지 않는다.
+            return cached.isEmpty() ? List.of() : parseStations(cached);
         }
         JsonNode items = fetchJsonItems(stationClient, "/getMsrstnList", uri -> uri
                 .queryParam("returnType", "json")
@@ -161,10 +168,12 @@ public class AirKoreaClient {
                 .queryParam("pageNo", 1)
                 .queryParam("ver", "1.3"));
         if (items == null) {
-            return List.of(); // 미신청/실패 → 시도 평균 폴백 (캐시하지 않고 다음에 재시도)
+            // 미신청·장애 시 매 요청이 8초씩 재시도하지 않도록 실패를 짧게 기억한다(시도 평균으로 폴백).
+            cacheStore.put(STATION_KEY, objectMapper.createArrayNode(), FAILURE_TTL);
+            return List.of();
         }
         List<Station> stations = parseStations(items);
-        stationCache.set(new StationCache(stations, Instant.now().plus(STATION_TTL)));
+        cacheStore.put(STATION_KEY, items, STATION_TTL);
         log.info("air quality stations loaded: {} (with coords)", stations.size());
         return stations;
     }
@@ -277,9 +286,5 @@ public class AirKoreaClient {
     private record Station(String name, double lat, double lng) {
     }
 
-    private record MeasureCache(JsonNode items, Instant expiresAt) {
-    }
 
-    private record StationCache(List<Station> stations, Instant expiresAt) {
-    }
 }

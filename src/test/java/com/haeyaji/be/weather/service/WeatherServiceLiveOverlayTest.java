@@ -1,5 +1,6 @@
 package com.haeyaji.be.weather.service;
 
+import com.haeyaji.be.common.cache.InMemoryCacheStore;
 import com.haeyaji.be.weather.client.airquality.AirKoreaClient;
 import com.haeyaji.be.weather.client.kma.KmaMidTermWeatherClient;
 import com.haeyaji.be.weather.client.kma.KmaNowcastClient;
@@ -70,7 +71,7 @@ class WeatherServiceLiveOverlayTest {
         AirKoreaClient air = mock(AirKoreaClient.class);
         when(air.getAirQuality(anyDouble(), anyDouble()))
                 .thenReturn(com.haeyaji.be.weather.domain.AirQuality.EMPTY);
-        return new WeatherService(shortTerm, midTerm, nowcast, ultra, uv, air, 30, fixedClock);
+        return new WeatherService(shortTerm, midTerm, nowcast, ultra, uv, air, new InMemoryCacheStore(), 30, fixedClock);
     }
 
     @Test

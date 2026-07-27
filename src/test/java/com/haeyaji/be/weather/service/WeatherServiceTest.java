@@ -1,5 +1,6 @@
 package com.haeyaji.be.weather.service;
 
+import com.haeyaji.be.common.cache.InMemoryCacheStore;
 import com.haeyaji.be.weather.client.airquality.AirKoreaClient;
 import com.haeyaji.be.weather.client.kma.KmaMidTermWeatherClient;
 import com.haeyaji.be.weather.client.kma.KmaNowcastClient;
@@ -83,7 +84,7 @@ class WeatherServiceTest {
         // 초단기(실황/예보)는 이 테스트 관심사가 아니므로 미제공(fail-soft 경로) 스텁
         return new WeatherService(shortProvider(), midProvider(),
                 nowcastProvider(), ultraProvider(),
-                uvProvider(), airProvider(), 30, fixedClock);
+                uvProvider(), airProvider(), new InMemoryCacheStore(), 30, fixedClock);
     }
 
     @Test

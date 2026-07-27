@@ -1,5 +1,6 @@
 package com.haeyaji.be.weather.client.livingidx;
 
+import com.haeyaji.be.common.cache.RedisCacheStore;
 import com.haeyaji.be.weather.client.airquality.SidoRegion;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,7 +15,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 자외선지수 아웃바운드 어댑터 (기상청 생활기상지수 getUVIdxV5 = 조회서비스 3.0, data.go.kr).
@@ -40,13 +40,19 @@ public class KmaUvClient {
     private final ObjectMapper objectMapper;
     private final String serviceKey;
     /** areaNo|발표시각 → 예보 item. 발표시각이 키에 포함되어 새 발표 시 자연 무효화. */
-    private final Map<String, JsonNode> cache = new ConcurrentHashMap<>();
+    /** 자외선지수는 3시간 간격 발표 — 키에 발표시각이 들어가므로 TTL은 그 주기를 덮으면 된다. */
+    private static final Duration CACHE_TTL = Duration.ofHours(4);
+    private static final String CACHE_PREFIX = "kma:uv:v1:";
+
+    private final RedisCacheStore cacheStore;
 
     public KmaUvClient(ObjectMapper objectMapper,
+                       RedisCacheStore cacheStore,
                        @Value("${haeyaji.weather.uv.base-url}") String baseUrl,
                        @Value("${haeyaji.weather.datakr.service-key:}") String serviceKey) {
         this.webClient = WebClient.builder().baseUrl(baseUrl).build();
         this.objectMapper = objectMapper;
+        this.cacheStore = cacheStore;
         this.serviceKey = serviceKey;
     }
 
@@ -60,15 +66,12 @@ public class KmaUvClient {
             String time = baseTime.format(TIME);
 
             // 같은 지역·발표시각은 응답이 동일(여러 날짜 커버) → 캐시 재사용으로 호출 제한을 지킨다.
-            String cacheKey = region.areaNo() + "|" + time;
-            JsonNode item = cache.get(cacheKey);
+            String cacheKey = CACHE_PREFIX + region.areaNo() + "|" + time;
+            JsonNode item = cacheStore.get(cacheKey, JsonNode.class);
             if (item == null) {
                 item = fetchItem(region.areaNo(), time);
                 if (item != null) {
-                    if (cache.size() > 64) {
-                        cache.clear(); // 지난 발표시각 키 정리(최대 17지역 × 소수 발표라 단순 클리어로 충분)
-                    }
-                    cache.put(cacheKey, item);
+                    cacheStore.put(cacheKey, item, CACHE_TTL);
                 }
             }
             return item == null ? null : peakForDate(item, baseTime, date);

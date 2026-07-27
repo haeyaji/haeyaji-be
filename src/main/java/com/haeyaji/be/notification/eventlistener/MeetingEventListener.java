@@ -2,6 +2,8 @@ package com.haeyaji.be.notification.eventlistener;
 
 import com.haeyaji.be.meeting.domain.MeetingConfirmedEvent;
 import com.haeyaji.be.meeting.domain.MeetingInvitedEvent;
+import com.haeyaji.be.member.domain.Member;
+import com.haeyaji.be.member.repository.MemberRepository;
 import com.haeyaji.be.notification.domain.NotificationCategory;
 import com.haeyaji.be.notification.domain.NotificationType;
 import com.haeyaji.be.notification.service.NotificationService;
@@ -17,17 +19,19 @@ import java.util.UUID;
 @Component
 @RequiredArgsConstructor
 public class MeetingEventListener {
-    // Todo: EventBody 어떻게 채울 것인지?
+
     private final NotificationService notificationService;
+    private final MemberRepository memberRepository;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onInvited(MeetingInvitedEvent event) {
+        String inviterNickname = resolveNickname(event.inviterMemberId());
         for (UUID inviteeId : event.inviteeMemberIds()) {
             try {
                 notificationService.send(
                         event.inviterMemberId(), inviteeId,
                         NotificationCategory.INVITE, NotificationType.MEETING_INVITE,
-                        event.meetingTitle(), "약속에 초대되었습니다.", event.meetingId(),
+                        event.meetingTitle(), inviterNickname + "님이 약속에 초대했습니다.", event.meetingId(),
                         event.shareToken()
                 );
             } catch (Exception e) { // 500에러 터질 시 알림 발송 전체적으로 이루어지지 않을 수 있음
@@ -55,5 +59,13 @@ public class MeetingEventListener {
             }
 
         }
+    }
+
+    // 닉네임 온보딩 전(null) 대비 fallback 포함
+    private String resolveNickname(UUID memberId) {
+        return memberRepository.findById(memberId)
+                .map(Member::getNickname)
+                .filter(nickname -> nickname != null && !nickname.isBlank())
+                .orElse("친구");
     }
 }

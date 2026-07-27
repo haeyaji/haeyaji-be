@@ -100,9 +100,9 @@ public class MeetingService {
         entity.confirm(request.confirmedStartAt(), request.confirmedEndAt());
         MeetingDetail detail = loadDetail(entity);
 
-        // 알림(noti) 연계 지점 — 참여자 전원에게 확정 알림을 만들 수 있도록 이벤트 발행
+        // 확정 후속 처리 이벤트 — todo 모듈이 공유 할 일로 전환(MEET-10), 알림 모듈이 확정 알림 생성
         eventPublisher.publishEvent(new MeetingConfirmedEvent(
-                entity.getId(), entity.getShareToken(), entity.getTitle(),
+                entity.getId(), entity.getShareToken(), entity.getTitle(), meeting.creatorId(),
                 request.confirmedStartAt(), request.confirmedEndAt(),
                 detail.participants().stream().map(MeetingParticipant::memberId).toList()));
         return detail;

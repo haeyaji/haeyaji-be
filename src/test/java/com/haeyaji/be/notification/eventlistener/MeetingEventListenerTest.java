@@ -1,8 +1,9 @@
 package com.haeyaji.be.notification.eventlistener;
 
 import com.haeyaji.be.meeting.domain.MeetingInvitedEvent;
-import com.haeyaji.be.notification.domain.Notification;
 import com.haeyaji.be.notification.domain.NotificationType;
+import com.haeyaji.be.notification.dto.NotificationResponse;
+import com.haeyaji.be.notification.redis.NotificationRedisPublisher;
 import com.haeyaji.be.notification.repository.NotificationRepository;
 import com.haeyaji.be.notification.service.NotificationService;
 import org.junit.jupiter.api.Test;
@@ -18,9 +19,10 @@ import static org.mockito.Mockito.*;
 class MeetingEventListenerTest {
 
     @Test
-    void 초대_이벤트를_받으면_저장되는_알림_내용이_이벤트값과_일치한다() {
+    void 초대_이벤트를_받으면_발행되는_알림_내용이_이벤트값과_일치한다() {
         NotificationRepository notificationRepository = mock(NotificationRepository.class);
-        NotificationService notificationService = new NotificationService(notificationRepository);
+        NotificationRedisPublisher notificationRedisPublisher = mock(NotificationRedisPublisher.class);
+        NotificationService notificationService = new NotificationService(notificationRepository, notificationRedisPublisher);
         MeetingEventListener listener = new MeetingEventListener(notificationService);
 
         UUID meetingId = UUID.randomUUID();
@@ -31,19 +33,22 @@ class MeetingEventListenerTest {
 
         listener.onInvited(event);
 
-        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
-        verify(notificationRepository).save(captor.capture());
-        Notification saved = captor.getValue();
-        assertThat(saved.getMemberId()).isEqualTo(inviteeId);
-        assertThat(saved.getType()).isEqualTo(NotificationType.MEETING_INVITE);
-        assertThat(saved.getRefId()).isEqualTo(meetingId);
-        assertThat(saved.getLinkToken()).isEqualTo("shareToken123");
+        ArgumentCaptor<UUID> memberIdCaptor = ArgumentCaptor.forClass(UUID.class);
+        ArgumentCaptor<NotificationResponse> responseCaptor = ArgumentCaptor.forClass(NotificationResponse.class);
+        verify(notificationRedisPublisher).publish(memberIdCaptor.capture(), responseCaptor.capture());
+
+        assertThat(memberIdCaptor.getValue()).isEqualTo(inviteeId);
+        NotificationResponse published = responseCaptor.getValue();
+        assertThat(published.type()).isEqualTo(NotificationType.MEETING_INVITE);
+        assertThat(published.refId()).isEqualTo(meetingId);
+        assertThat(published.linkToken()).isEqualTo("shareToken123");
     }
 
     @Test
-    void 여러_명을_초대하면_초대받은_인원수만큼_저장이_호출된다() {
+    void 여러_명을_초대하면_초대받은_인원수만큼_발행이_호출된다() {
         NotificationRepository notificationRepository = mock(NotificationRepository.class);
-        NotificationService notificationService = new NotificationService(notificationRepository);
+        NotificationRedisPublisher notificationRedisPublisher = mock(NotificationRedisPublisher.class);
+        NotificationService notificationService = new NotificationService(notificationRepository, notificationRedisPublisher);
         MeetingEventListener listener = new MeetingEventListener(notificationService);
 
         List<UUID> invitees = List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
@@ -52,6 +57,6 @@ class MeetingEventListenerTest {
 
         listener.onInvited(event);
 
-        verify(notificationRepository, times(3)).save(any());
+        verify(notificationRedisPublisher, times(3)).publish(any(), any());
     }
 }

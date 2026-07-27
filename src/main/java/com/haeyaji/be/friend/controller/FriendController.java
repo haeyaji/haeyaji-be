@@ -5,6 +5,7 @@ import com.haeyaji.be.common.exception.ErrorCode;
 import com.haeyaji.be.common.response.ApiResponse;
 import com.haeyaji.be.common.response.SuccessCode;
 import com.haeyaji.be.friend.domain.Friend;
+import com.haeyaji.be.friend.domain.FriendWithCounterpart;
 import com.haeyaji.be.friend.dto.FriendRequestCreateRequest;
 import com.haeyaji.be.friend.dto.FriendResponse;
 import com.haeyaji.be.friend.service.FriendService;
@@ -49,44 +50,49 @@ public class FriendController {
     @PostMapping("/requests")
     public ApiResponse<FriendResponse> sendRequest(@AuthenticationPrincipal CustomUserDetails userDetails,
                                                     @Valid @RequestBody FriendRequestCreateRequest request) {
-        Friend friend = friendService.sendRequest(userDetails.getMemberId(), request.receiverId());
-        return ApiResponse.of(FriendResponse.from(friend), SuccessCode.POST_SUCCESS);
+        UUID me = userDetails.getMemberId();
+        Friend friend = friendService.sendRequest(me, request.receiverId());
+        return ApiResponse.of(FriendResponse.from(friend, me), SuccessCode.POST_SUCCESS);
     }
 
     // /friends/requests?type=received 또는 ?type=sent로 같은 엔드포인트 내 분기
     @GetMapping("/requests")
     public ApiResponse<List<FriendResponse>> getRequests(@AuthenticationPrincipal CustomUserDetails userDetails,
                                                           @RequestParam(defaultValue = "received") String type) {
-        List<Friend> friends = switch (type) {
-            case "received" -> friendService.getReceivedRequests(userDetails.getMemberId());
-            case "sent" -> friendService.getSentRequests(userDetails.getMemberId());
+        UUID me = userDetails.getMemberId();
+        List<FriendWithCounterpart> friends = switch (type) {
+            case "received" -> friendService.getReceivedRequests(me);
+            case "sent" -> friendService.getSentRequests(me);
             default -> throw new BusinessException(ErrorCode.INVALID_PARAMETER);
         };
 
-        List<FriendResponse> responses = friends.stream().map(FriendResponse::from).toList();
-        return ApiResponse.of(responses, SuccessCode.GET_SUCCESS);
+        return ApiResponse.of(toResponses(friends), SuccessCode.GET_SUCCESS);
     }
 
     @PostMapping("/requests/{id}/accept")
     public ApiResponse<FriendResponse> acceptRequest(@AuthenticationPrincipal CustomUserDetails userDetails,
                                                       @PathVariable UUID id) {
-        Friend friend = friendService.acceptRequest(id, userDetails.getMemberId());
-        return ApiResponse.of(FriendResponse.from(friend), SuccessCode.PUT_SUCCESS);
+        UUID me = userDetails.getMemberId();
+        Friend friend = friendService.acceptRequest(id, me);
+        return ApiResponse.of(FriendResponse.from(friend, me), SuccessCode.PUT_SUCCESS);
     }
 
     @PostMapping("/requests/{id}/reject")
     public ApiResponse<FriendResponse> rejectRequest(@AuthenticationPrincipal CustomUserDetails userDetails,
                                                       @PathVariable UUID id) {
-        Friend friend = friendService.rejectRequest(id, userDetails.getMemberId());
-        return ApiResponse.of(FriendResponse.from(friend), SuccessCode.PUT_SUCCESS);
+        UUID me = userDetails.getMemberId();
+        Friend friend = friendService.rejectRequest(id, me);
+        return ApiResponse.of(FriendResponse.from(friend, me), SuccessCode.PUT_SUCCESS);
     }
 
     @GetMapping
     public ApiResponse<List<FriendResponse>> getFriends(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        List<FriendResponse> responses = friendService.getFriends(userDetails.getMemberId()).stream()
-                .map(FriendResponse::from)
-                .toList();
-        return ApiResponse.of(responses, SuccessCode.GET_SUCCESS);
+        UUID me = userDetails.getMemberId();
+        return ApiResponse.of(toResponses(friendService.getFriends(me)), SuccessCode.GET_SUCCESS);
+    }
+
+    private static List<FriendResponse> toResponses(List<FriendWithCounterpart> friends) {
+        return friends.stream().map(FriendResponse::from).toList();
     }
 
     @DeleteMapping("/{id}")

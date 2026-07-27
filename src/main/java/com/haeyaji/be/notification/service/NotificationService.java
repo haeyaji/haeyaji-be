@@ -7,6 +7,8 @@ import com.haeyaji.be.common.response.CursorPageResponse;
 import com.haeyaji.be.notification.domain.Notification;
 import com.haeyaji.be.notification.domain.NotificationCategory;
 import com.haeyaji.be.notification.domain.NotificationType;
+import com.haeyaji.be.notification.dto.NotificationResponse;
+import com.haeyaji.be.notification.redis.NotificationRedisPublisher;
 import com.haeyaji.be.notification.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,6 +24,7 @@ import java.util.UUID;
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
+    private final NotificationRedisPublisher notificationRedisPublisher;
 
     // Todo: 같은 refId로 여러 번 알림 발송하는 것이 정당한 경우는 멱등성 체크 제외
     private static final Set<NotificationType> IDEMPOTENT_TYPES =
@@ -117,6 +120,9 @@ public class NotificationService {
 
         Notification noti = Notification.create(memberId, category, type, title, body, refId, linkToken);
         notificationRepository.save(noti);
+
+        // 저장 성공 후 실시간 push용 Redis 발행 — memberId별 채널이라 그 채널을 구독 중인 인스턴스만 받음
+        notificationRedisPublisher.publish(memberId, NotificationResponse.from(noti));
 
         return noti;
     }

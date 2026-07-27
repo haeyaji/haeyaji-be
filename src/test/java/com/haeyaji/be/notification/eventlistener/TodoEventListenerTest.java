@@ -3,6 +3,7 @@ package com.haeyaji.be.notification.eventlistener;
 import com.haeyaji.be.notification.domain.NotificationCategory;
 import com.haeyaji.be.notification.domain.NotificationType;
 import com.haeyaji.be.notification.service.NotificationService;
+import com.haeyaji.be.todo.domain.ParticipantRole;
 import com.haeyaji.be.todo.domain.SharedTodoUpdatedEvent;
 import com.haeyaji.be.todo.domain.TodoShareRespondedEvent;
 import com.haeyaji.be.todo.domain.TodoSharedEvent;
@@ -44,7 +45,9 @@ class TodoEventListenerTest {
 
     @Test
     void 초대는_초대받은_사람_수만큼_발송된다() {
-        listener.onShared(new TodoSharedEvent(todoId, "장보기", owner, List.of(invitee1, invitee2)));
+        listener.onShared(new TodoSharedEvent(todoId, "장보기", owner, List.of(
+                new TodoSharedEvent.Invitee(invitee1, ParticipantRole.EDITOR),
+                new TodoSharedEvent.Invitee(invitee2, ParticipantRole.VIEWER))));
 
         verify(notificationService).send(eq(owner), eq(invitee1), eq(NotificationCategory.INVITE),
                 eq(NotificationType.SHARE_INVITE), any(), any(), eq(todoId), eq(null));

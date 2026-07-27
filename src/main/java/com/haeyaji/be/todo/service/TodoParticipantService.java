@@ -47,7 +47,9 @@ public class TodoParticipantService {
                 .toList();
         if (!saved.isEmpty()) {
             eventPublisher.publishEvent(new TodoSharedEvent(todoId, todo.getTitle(), ownerId,
-                    saved.stream().map(TodoParticipant::memberId).toList()));
+                    saved.stream()
+                            .map(p -> new TodoSharedEvent.Invitee(p.memberId(), p.role()))
+                            .toList()));
         }
         return saved;
     }

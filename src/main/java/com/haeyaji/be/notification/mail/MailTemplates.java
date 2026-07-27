@@ -9,6 +9,8 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * 메일 본문 템플릿 로더. {@code resources/mail/*.html}을 읽어 <code>{{키}}</code>를 값으로 치환한다.
@@ -26,7 +28,17 @@ public class MailTemplates {
     private final Map<String, String> cache = new ConcurrentHashMap<>();
 
     /**
-     * @param name 확장자를 뺀 템플릿 이름 (예: {@code meeting-invite})
+     * 값이 있을 때만 남길 구간. 템플릿에
+     * {@code <!--{{?placeName}}--> … <!--{{/placeName}}-->}로 감싸 두면
+     * 값이 비었을 때 그 구간이 통째로 빠진다.
+     *
+     * <p>HTML 주석으로 표시하는 이유: 템플릿 파일 자체를 브라우저에서 그대로 열어 디자인을 볼 수 있다.
+     */
+    private static final Pattern OPTIONAL_BLOCK = Pattern.compile(
+            "<!--\\{\\{\\?(\\w+)}}-->(.*?)<!--\\{\\{/\\1}}-->", Pattern.DOTALL);
+
+    /**
+     * @param name 확장자를 뺀 템플릿 이름 (예: {@code haeyaji-meeting-invite})
      * @param values <code>{{키}}</code> → 값. 값은 escape되어 삽입된다.
      * @return 치환된 HTML. 템플릿을 못 읽으면 빈 문자열(메일은 부가 기능이라 예외를 던지지 않는다).
      */
@@ -35,11 +47,24 @@ public class MailTemplates {
         if (template.isEmpty()) {
             return "";
         }
-        String rendered = template;
+        String rendered = resolveOptionalBlocks(template, values);
         for (Map.Entry<String, String> entry : values.entrySet()) {
             rendered = rendered.replace("{{" + entry.getKey() + "}}", escape(entry.getValue()));
         }
         return rendered;
+    }
+
+    /** 값이 빈 선택 구간은 지우고, 값이 있는 구간은 표시만 걷어낸다. */
+    private static String resolveOptionalBlocks(String template, Map<String, String> values) {
+        Matcher matcher = OPTIONAL_BLOCK.matcher(template);
+        StringBuilder result = new StringBuilder();
+        while (matcher.find()) {
+            String value = values.get(matcher.group(1));
+            String replacement = (value == null || value.isBlank()) ? "" : matcher.group(2);
+            matcher.appendReplacement(result, Matcher.quoteReplacement(replacement));
+        }
+        matcher.appendTail(result);
+        return result.toString();
     }
 
     private String load(String name) {

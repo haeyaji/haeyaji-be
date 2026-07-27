@@ -4,6 +4,7 @@ import com.haeyaji.be.meeting.domain.MeetingStatus;
 import com.haeyaji.be.meeting.repository.MeetingParticipantRepository;
 import com.haeyaji.be.meeting.repository.MeetingRepository;
 import com.haeyaji.be.notification.domain.NotificationType;
+import com.haeyaji.be.notification.mail.ReminderMailer;
 import com.haeyaji.be.notification.service.NotificationService;
 import com.haeyaji.be.todo.domain.InviteStatus;
 import com.haeyaji.be.todo.domain.TodoSource;
@@ -43,6 +44,7 @@ class ReminderSchedulerTest {
     private MeetingRepository meetingRepository;
     private MeetingParticipantRepository meetingParticipantRepository;
     private NotificationService notificationService;
+    private ReminderMailer reminderMailer;
 
     @BeforeEach
     void setUp() {
@@ -51,14 +53,15 @@ class ReminderSchedulerTest {
         meetingRepository = mock(MeetingRepository.class);
         meetingParticipantRepository = mock(MeetingParticipantRepository.class);
         notificationService = mock(NotificationService.class);
+        reminderMailer = mock(ReminderMailer.class);
         when(todoParticipantRepository.findByTodoIdInAndInviteStatus(any(), any())).thenReturn(List.of());
         when(meetingRepository.findByStatusAndConfirmedStartAtBetween(any(), any(), any())).thenReturn(List.of());
     }
 
     private ReminderScheduler schedulerAt(String kstInstant) {
         Clock clock = Clock.fixed(Instant.parse(kstInstant), KST);
-        return new ReminderScheduler(todoRepository, todoParticipantRepository,
-                meetingRepository, meetingParticipantRepository, notificationService, clock);
+        return new ReminderScheduler(todoRepository, todoParticipantRepository, meetingRepository,
+                meetingParticipantRepository, notificationService, reminderMailer, clock);
     }
 
     @Test

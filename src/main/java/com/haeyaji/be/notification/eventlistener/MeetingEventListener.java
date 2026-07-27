@@ -42,7 +42,7 @@ public class MeetingEventListener {
         for (UUID participantId : event.participantMemberIds()) {
             try {
                 notificationService.send(
-                        null, // Todo: 행위자 정보가 이벤트에 없음
+                        event.creatorId(), // 확정한 사람(방장) — 본인에게는 발송되지 않는다(NOTI-16)
                         participantId,
                         NotificationCategory.INVITE, NotificationType.MEETING_CONFIRMED,
                         event.meetingTitle(), "eventbody", event.meetingId(),

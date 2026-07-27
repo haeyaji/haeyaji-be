@@ -1,6 +1,8 @@
 package com.haeyaji.be.notification.eventlistener;
 
+import com.haeyaji.be.meeting.domain.MeetingInviteRespondedEvent;
 import com.haeyaji.be.meeting.domain.MeetingInvitedEvent;
+import com.haeyaji.be.notification.domain.NotificationCategory;
 import com.haeyaji.be.notification.domain.NotificationType;
 import com.haeyaji.be.notification.dto.NotificationResponse;
 import com.haeyaji.be.notification.redis.NotificationRedisPublisher;
@@ -58,5 +60,42 @@ class MeetingEventListenerTest {
         listener.onInvited(event);
 
         verify(notificationRedisPublisher, times(3)).publish(any(), any());
+    }
+
+    @Test
+    void 초대_응답은_방장에게만_가고_수락_거절_문구가_다르다() {
+        // 방장은 누가 들어왔는지 알아야 마감을 기다릴지 먼저 확정할지 판단할 수 있다.
+        NotificationService notificationService = mock(NotificationService.class);
+        ActorNameResolver actorNames = mock(ActorNameResolver.class);
+        when(actorNames.nicknameOf(any())).thenReturn("밥");
+        MeetingEventListener listener = new MeetingEventListener(notificationService, actorNames);
+
+        UUID meetingId = UUID.randomUUID();
+        UUID creatorId = UUID.randomUUID();
+        UUID responderId = UUID.randomUUID();
+
+        listener.onInviteResponded(new MeetingInviteRespondedEvent(
+                meetingId, "tok", "저녁 약속", creatorId, responderId, true));
+        listener.onInviteResponded(new MeetingInviteRespondedEvent(
+                meetingId, "tok", "저녁 약속", creatorId, responderId, false));
+
+        ArgumentCaptor<String> bodies = ArgumentCaptor.forClass(String.class);
+        verify(notificationService, times(2)).send(eq(responderId), eq(creatorId),
+                eq(NotificationCategory.INVITE), eq(NotificationType.MEETING_INVITE_RESPONSE),
+                any(), bodies.capture(), eq(meetingId), eq("tok"));
+        assertThat(bodies.getAllValues().get(0)).contains("수락");
+        assertThat(bodies.getAllValues().get(1)).contains("거절");
+    }
+
+    @Test
+    void 초대_응답_알림이_실패해도_예외가_밖으로_나가지_않는다() {
+        NotificationService notificationService = mock(NotificationService.class);
+        doThrow(new RuntimeException("db down"))
+                .when(notificationService).send(any(), any(), any(), any(), any(), any(), any(), any());
+        MeetingEventListener listener =
+                new MeetingEventListener(notificationService, mock(ActorNameResolver.class));
+
+        listener.onInviteResponded(new MeetingInviteRespondedEvent(
+                UUID.randomUUID(), "tok", "저녁 약속", UUID.randomUUID(), UUID.randomUUID(), true));
     }
 }

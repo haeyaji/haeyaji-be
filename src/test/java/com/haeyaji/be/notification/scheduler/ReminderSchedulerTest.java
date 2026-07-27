@@ -3,6 +3,7 @@ package com.haeyaji.be.notification.scheduler;
 import com.haeyaji.be.meeting.domain.MeetingStatus;
 import com.haeyaji.be.meeting.repository.MeetingParticipantRepository;
 import com.haeyaji.be.meeting.repository.MeetingRepository;
+import com.haeyaji.be.notification.domain.Notification;
 import com.haeyaji.be.notification.domain.NotificationType;
 import com.haeyaji.be.notification.mail.ReminderMailer;
 import com.haeyaji.be.notification.service.NotificationService;
@@ -116,6 +117,46 @@ class ReminderSchedulerTest {
                 eq(NotificationType.TODO_REMINDER), any(), any(), eq(todoId), eq(null));
         verify(notificationService).sendSystem(eq(participant), any(),
                 eq(NotificationType.TODO_REMINDER), any(), any(), eq(todoId), eq(null));
+    }
+
+    @Test
+    void 이미_보낸_알림이면_메일도_다시_나가지_않는다() {
+        // 스케줄러는 5분마다 같은 일정을 다시 집는다. 중복 알림은 유니크 제약이 거르지만 메일은 안 걸러지므로,
+        // 알림이 실제로 만들어졌을 때만 보내야 한다 — 아니면 5분마다 같은 메일이 나간다.
+        UUID todoId = UUID.randomUUID();
+        TodoEntity todo = mock(TodoEntity.class);
+        when(todo.getId()).thenReturn(todoId);
+        when(todo.getMemberId()).thenReturn(UUID.randomUUID());
+        when(todo.getTitle()).thenReturn("회의");
+        when(todo.getStartTime()).thenReturn(LocalTime.of(14, 20));
+        when(todoRepository.findByTodoDateAndStartTimeBetweenAndStatusAndSourceNot(
+                any(), any(), any(), any(), any())).thenReturn(List.of(todo));
+        when(notificationService.sendSystem(any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(null); // 이미 보낸 건이라 걸러짐
+
+        schedulerAt("2026-07-27T05:00:00Z").remind();
+
+        verify(reminderMailer, never()).send(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void 알림이_새로_만들어지면_메일이_나간다() {
+        UUID owner = UUID.randomUUID();
+        TodoEntity todo = mock(TodoEntity.class);
+        when(todo.getId()).thenReturn(UUID.randomUUID());
+        when(todo.getMemberId()).thenReturn(owner);
+        when(todo.getTitle()).thenReturn("한강 산책");
+        when(todo.getStartTime()).thenReturn(LocalTime.of(14, 20));
+        when(todo.getPlaceName()).thenReturn("한강공원");
+        when(todoRepository.findByTodoDateAndStartTimeBetweenAndStatusAndSourceNot(
+                any(), any(), any(), any(), any())).thenReturn(List.of(todo));
+        when(notificationService.sendSystem(any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(mock(Notification.class));
+
+        schedulerAt("2026-07-27T05:00:00Z").remind();
+
+        // 날씨 문구는 이 배치가 알 수 없다 — 궂은 날씨는 WeatherAlertScheduler가 따로 알린다.
+        verify(reminderMailer).send(eq(owner), eq("한강 산책"), eq(LocalTime.of(14, 20)), eq("한강공원"), eq(null));
     }
 
     @Test

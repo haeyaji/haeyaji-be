@@ -1,5 +1,6 @@
 package com.haeyaji.be.notification.scheduler;
 
+import com.haeyaji.be.notification.domain.Notification;
 import com.haeyaji.be.notification.domain.NotificationType;
 import com.haeyaji.be.notification.mail.ReminderMailer;
 import com.haeyaji.be.notification.service.NotificationService;
@@ -40,6 +41,7 @@ class WeatherAlertSchedulerTest {
     private TodoRepository todoRepository;
     private WeatherService weatherService;
     private NotificationService notificationService;
+    private ReminderMailer reminderMailer;
     private WeatherAlertScheduler scheduler;
 
     private final UUID owner = UUID.randomUUID();
@@ -49,9 +51,12 @@ class WeatherAlertSchedulerTest {
         todoRepository = mock(TodoRepository.class);
         weatherService = mock(WeatherService.class);
         notificationService = mock(NotificationService.class);
+        reminderMailer = mock(ReminderMailer.class);
+        when(notificationService.sendSystem(any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(mock(Notification.class));
         Clock clock = Clock.fixed(Instant.parse("2026-07-26T22:00:00Z"), KST); // KST 07:00
         scheduler = new WeatherAlertScheduler(todoRepository, weatherService, notificationService,
-                mock(ReminderMailer.class), clock);
+                reminderMailer, clock);
     }
 
     private TodoEntity outdoorTodo(String title) {
@@ -87,6 +92,32 @@ class WeatherAlertSchedulerTest {
         scheduler.alertBadWeather();
 
         verify(notificationService, never()).sendSystem(any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void 날씨_문구가_메일에도_실린다() {
+        when(todoRepository.findByTodoDateAndStatusAndLatIsNotNullAndLngIsNotNull(any(), any()))
+                .thenReturn(List.of(outdoorTodo("한강 산책")));
+        when(weatherService.getWeather(any())).thenReturn(weather(WeatherCondition.RAINY, "소나기"));
+
+        scheduler.alertBadWeather();
+
+        ArgumentCaptor<String> weatherLine = ArgumentCaptor.forClass(String.class);
+        verify(reminderMailer).send(eq(owner), eq("한강 산책"), any(), eq("한강공원"), weatherLine.capture());
+        assertThat(weatherLine.getValue()).contains("소나기");
+    }
+
+    @Test
+    void 이미_오늘_보낸_일정이면_메일도_다시_나가지_않는다() {
+        // 배치가 두 번 돌아도(재기동 등) 알림은 유니크 제약이 거른다. 메일도 그 결과를 따라야 한다.
+        when(todoRepository.findByTodoDateAndStatusAndLatIsNotNullAndLngIsNotNull(any(), any()))
+                .thenReturn(List.of(outdoorTodo("한강 산책")));
+        when(weatherService.getWeather(any())).thenReturn(weather(WeatherCondition.RAINY, "소나기"));
+        when(notificationService.sendSystem(any(), any(), any(), any(), any(), any(), any())).thenReturn(null);
+
+        scheduler.alertBadWeather();
+
+        verify(reminderMailer, never()).send(any(), any(), any(), any(), any());
     }
 
     @Test

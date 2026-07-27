@@ -8,6 +8,8 @@ import com.haeyaji.be.notification.domain.Notification;
 import com.haeyaji.be.notification.domain.NotificationType;
 import com.haeyaji.be.notification.dto.NotificationResponse;
 import com.haeyaji.be.notification.service.NotificationService;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
@@ -31,6 +34,7 @@ import java.util.UUID;
  * DELETE /api/notifications/{id}            삭제
  * </pre>
  */
+@Validated
 @RestController
 @RequestMapping("/notifications")
 @RequiredArgsConstructor
@@ -42,7 +46,7 @@ public class NotificationController {
     public ApiResponse<CursorPageResponse<NotificationResponse, UUID>> getNotifications(@AuthenticationPrincipal CustomUserDetails userDetails,
                                                                                           @RequestParam(required = false) NotificationType type,
                                                                                           @RequestParam(required = false) UUID cursor,
-                                                                                          @RequestParam(defaultValue = "20") int size) {
+                                                                                          @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
 
         CursorPageResponse<Notification, UUID> pageResponse = notificationService.getNotifications(userDetails.getMemberId(), type, cursor, size);
 

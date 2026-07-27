@@ -11,14 +11,19 @@ import com.haeyaji.be.notification.dto.NotificationResponse;
 import com.haeyaji.be.notification.redis.NotificationRedisPublisher;
 import com.haeyaji.be.notification.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -61,20 +66,17 @@ public class NotificationService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOTIFICATION_NOT_FOUND));
 
         if (!noti.getMemberId().equals(memberId)) {
-            throw new BusinessException(ErrorCode.NOTIFICATION_FORBIDDEN);
+            // 남의 알림 id인지조차 알려주지 않는다(존재 여부 유출 방지) — 없는 것과 같게 응답.
+            throw new BusinessException(ErrorCode.NOTIFICATION_NOT_FOUND);
         }
 
         noti.markAsRead();
     }
 
-    // 벌크 update 쿼리도 고려 가능
+    /** 미읽음이 수천 건이어도 UPDATE 한 번으로 끝낸다(건별 UPDATE는 요청 하나가 DB를 오래 잡는다). */
     @Transactional
     public void markAllAsRead(UUID memberId) {
-        List<Notification> notiList = notificationRepository.findByMemberIdAndReadFalse(memberId);
-
-        for (Notification noti : notiList) {
-            noti.markAsRead();
-        }
+        notificationRepository.markAllAsRead(memberId, LocalDateTime.now());
     }
 
     @Transactional
@@ -83,7 +85,8 @@ public class NotificationService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOTIFICATION_NOT_FOUND));
 
         if (!noti.getMemberId().equals(memberId)) {
-            throw new BusinessException(ErrorCode.NOTIFICATION_FORBIDDEN);
+            // 남의 알림 id인지조차 알려주지 않는다(존재 여부 유출 방지) — 없는 것과 같게 응답.
+            throw new BusinessException(ErrorCode.NOTIFICATION_NOT_FOUND);
         }
 
         notificationRepository.delete(noti);
@@ -99,8 +102,8 @@ public class NotificationService {
     public Notification send(UUID actorId, UUID memberId, NotificationCategory category, NotificationType type,
 
                              String title, String body, UUID refId, String linkToken) {
-        if (actorId.equals(memberId)) {
-            return null;
+        if (Objects.equals(actorId, memberId)) {
+            return null; // 자기 행동으로 생긴 알림은 자신에게 보내지 않는다(NOTI-16)
         }
 
         return doSend(memberId, category, type, title, body, refId, linkToken);
@@ -116,16 +119,27 @@ public class NotificationService {
     private Notification doSend(UUID memberId, NotificationCategory category, NotificationType type,
                                 String title, String body, UUID refId, String linkToken) {
 
-        if (IDEMPOTENT_TYPES.contains(type)
+        // refId가 null이면 'ref_id = null' 비교가 항상 거짓이라 중복을 못 거른다 → 대상에서 제외.
+        if (IDEMPOTENT_TYPES.contains(type) && refId != null
                 && notificationRepository.existsByMemberIdAndTypeAndRefId(memberId, type, refId)) {
             return null;
         }
 
         Notification noti = Notification.create(memberId, category, type, title, body, refId, linkToken);
-        notificationRepository.save(noti);
+        try {
+            notificationRepository.saveAndFlush(noti);
+        } catch (DataIntegrityViolationException e) {
+            // 사전 체크와 저장 사이 경합(스케줄러 중복 실행 등) — 유니크 제약이 최종 방어선(NOTI-17).
+            log.debug("이미 발송된 알림이라 건너뜀: member={} type={} ref={}", memberId, type, refId);
+            return null;
+        }
 
-        // 저장 성공 후 실시간 push용 Redis 발행 — memberId별 채널이라 그 채널을 구독 중인 인스턴스만 받음
-        notificationRedisPublisher.publish(memberId, NotificationResponse.from(noti));
+        // 실시간 push는 부가 기능 — Redis가 죽어도 알림 저장까지 롤백되면 안 된다(로그만 남기고 계속).
+        try {
+            notificationRedisPublisher.publish(memberId, NotificationResponse.from(noti));
+        } catch (Exception e) {
+            log.warn("알림 실시간 발행 실패(저장은 완료): member={} notiId={} err={}", memberId, noti.getId(), e.toString());
+        }
 
         return noti;
     }

@@ -110,8 +110,9 @@ GET    /api/members/search/{nickname}   친구 추가용 검색
 > 카카오는 이메일을 안 내려준다(비즈 앱 검수 전). 그래서 온보딩에서 직접 받고,
 > 소셜에서 받아온 값이 있으면 그걸 채운 뒤 비어 있을 때만 입력받는다.
 
-`GET /api/` · `GET /api/me`는 **로그인·JWT 확인용 디버그 엔드포인트**다(`MainController`).
-fe가 쓸 것은 `GET /api/members/me`.
+`/me`와 `/members/me`는 쓰임이 다르다. `GET /api/me`는 **세션 확인**용으로 `{memberId, role}`만
+돌려준다(fe가 앱 부팅 때 호출 — 401이면 재발급을 시도한다). 프로필(닉네임·이메일·가입일)은
+`GET /api/members/me`. `GET /api/`는 로그인 확인용 디버그다.
 
 ### 할 일 · 라벨 · 루틴
 
@@ -162,7 +163,7 @@ PATCH  /api/meetings/{shareToken}/confirm            방장 확정 → 공유 �
 ### 알림
 
 ```
-GET    /api/notifications?type={}&cursor={}&size={}          커서 페이지네이션(size 1~100)
+GET    /api/notifications?category={}&type={}&cursor={}&size={}   커서 페이지네이션(size 1~100)
 GET    /api/notifications/unread-count
 POST   /api/notifications/{id}/read | /read-all
 DELETE /api/notifications/{id}
@@ -179,8 +180,8 @@ GET    /api/notifications/stream                             SSE 실시간 푸�
 | 배치 | `TODO_REMINDER` · `MEETING_REMINDER` | 시작 10분 전 (5분 주기) |
 | 배치 | `TODO_WEATHER_ALERT` | 매일 07:00, 좌표 있는 오늘 일정이 비·눈 예보일 때 |
 
-- 목록 필터는 **타입 단건**(`type=MEETING_INVITE`)만 된다. 카테고리(INVITE/TODO/FRIEND) 단위
-  묶음 필터는 아직 없다 — fe가 탭으로 나눌 거면 be에 추가가 필요하다.
+- 필터 두 축: `category`(알림함 탭 — `INVITE`·`TODO`·`FRIEND`)와 `type`(그 안의 단건).
+  둘 다 주면 AND로 좁힌다. 없는 값은 400.
 - **자기 행동으로 생긴 알림은 자신에게 안 보낸다**.
 - **중복 방지**는 유니크 제약 `(member_id, type, ref_id)`. 배치는 "창에 걸린 것"만 훑고
   어디까지 보냈는지 기록하지 않는다 — 실행이 밀려도 다음 주기가 주워 담고, 이미 보낸 건 걸러진다.

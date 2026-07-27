@@ -11,12 +11,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -119,5 +123,57 @@ class NotificationServiceTest {
         assertThatThrownBy(() -> service.deleteNotification(notificationId, me))
                 .isInstanceOf(BusinessException.class);
         verify(repository, never()).delete(any());
+    }
+
+    private List<Notification> rows(int count) {
+        List<Notification> list = new ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            list.add(Notification.create(me, NotificationCategory.TODO, NotificationType.TODO_REMINDER,
+                    "제목" + i, "본문", UUID.randomUUID(), null));
+        }
+        return list;
+    }
+
+    @Test
+    void 다음_페이지가_있으면_요청한_개수만_돌려주고_초과분은_커서로_쓰지_않는다() {
+        // size+1을 조회해 "더 있는지"를 판단한다 — 덤으로 읽은 한 건이 응답에 새면 페이지가 어긋난다.
+        when(repository.getNotifications(eq(me), any(), any(), eq(3))).thenReturn(rows(3));
+
+        var page = service.getNotifications(me, null, null, 2);
+
+        assertThat(page.content()).hasSize(2);
+        assertThat(page.hasNext()).isTrue();
+        assertThat(page.nextCursor()).isEqualTo(page.content().getLast().getId());
+    }
+
+    @Test
+    void 마지막_페이지면_다음이_없다고_알린다() {
+        when(repository.getNotifications(eq(me), any(), any(), eq(3))).thenReturn(rows(2));
+
+        var page = service.getNotifications(me, null, null, 2);
+
+        assertThat(page.content()).hasSize(2);
+        assertThat(page.hasNext()).isFalse();
+    }
+
+    @Test
+    void 알림이_없으면_커서도_없다() {
+        // 빈 목록에서 마지막 원소를 집으려 하면 터진다.
+        when(repository.getNotifications(eq(me), any(), any(), anyInt())).thenReturn(new ArrayList<>());
+
+        var page = service.getNotifications(me, null, null, 20);
+
+        assertThat(page.content()).isEmpty();
+        assertThat(page.hasNext()).isFalse();
+        assertThat(page.nextCursor()).isNull();
+    }
+
+    @Test
+    void 전체_읽음은_건별이_아니라_한_번에_처리한다() {
+        // 미읽음이 수천 건이면 건별 UPDATE는 요청 하나가 DB를 오래 잡는다.
+        service.markAllAsRead(me);
+
+        verify(repository).markAllAsRead(eq(me), any());
+        verify(repository, never()).findByMemberIdAndReadFalse(any());
     }
 }

@@ -69,8 +69,13 @@ public class SseConnectionRegistry implements MessageListener {
         return emitter;
     }
 
-    /** 내가 등록한 emitter일 때만 해제한다 — 옛 연결의 뒤늦은 콜백이 새 연결을 끊지 않도록. */
-    private void unregister(UUID memberId, SseEmitter emitter) {
+    /**
+     * 내가 등록한 emitter일 때만 해제한다 — 옛 연결의 뒤늦은 콜백이 새 연결을 끊지 않도록.
+     *
+     * <p>패키지 공개인 이유: emitter 종료 콜백은 Spring MVC가 붙여줘야 돌아서 단위 테스트에서
+     * {@code complete()}로는 재현할 수 없다. 경합 규칙 자체를 직접 검증하려고 열어 둔다.
+     */
+    void unregister(UUID memberId, SseEmitter emitter) {
         if (emitters.remove(memberId, emitter)) {
             redisMessageListenerContainer.removeMessageListener(this, topicOf(memberId));
         }

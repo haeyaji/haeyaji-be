@@ -75,7 +75,8 @@ spring:
 # OAuth2LoginSuccessHandler에서 sendRedirect용도
 app:
   frontend:
-    callback-url: http://localhost:3000/oauth/callback
+    # fe 개발 서버(vite)는 5173으로 뜬다 — 기본값이 다르면 로그인 후 빈 화면으로 튕긴다.
+    callback-url: ${FRONTEND_CALLBACK_URL:http://localhost:5173/oauth/callback}
 
 jwt:
   secret: ${JWT_SECRET}

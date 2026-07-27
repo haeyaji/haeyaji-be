@@ -77,6 +77,21 @@ public class MeetingEntity extends ImmutableBaseEntity {
         return entity;
     }
 
+    /** 부분 수정 — null은 "안 보냄"이라 기존 값을 유지한다. 시간 격자는 네 값이 함께 들어온다. */
+    public void update(String title, TimeGrid grid, LocalDateTime deadline) {
+        if (title != null) {
+            this.title = title;
+        }
+        if (grid != null) {
+            this.timeStart = grid.timeStart();
+            this.timeEnd = grid.timeEnd();
+            this.slotUnitMinutes = grid.slotUnitMinutes();
+        }
+        if (deadline != null) {
+            this.deadline = deadline;
+        }
+    }
+
     public void confirm(LocalDateTime startAt, LocalDateTime endAt) {
         this.confirmedStartAt = startAt;
         this.confirmedEndAt = endAt;

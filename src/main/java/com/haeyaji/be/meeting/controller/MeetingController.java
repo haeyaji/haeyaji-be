@@ -6,6 +6,7 @@ import com.haeyaji.be.meeting.dto.MeetingConfirmRequest;
 import com.haeyaji.be.meeting.dto.MeetingCreateRequest;
 import com.haeyaji.be.meeting.dto.MeetingDetailResponse;
 import com.haeyaji.be.meeting.dto.MeetingSummaryResponse;
+import com.haeyaji.be.meeting.dto.MeetingUpdateRequest;
 import com.haeyaji.be.meeting.service.MeetingService;
 import com.haeyaji.be.member.oauth.CustomUserDetails;
 import jakarta.validation.Valid;
@@ -13,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,13 +26,15 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * 약속 생성·조회·확정 (MEET-1·2·9·11·12·13·14). 요청 회원은 인증 principal에서 얻는다.
+ * 약속 생성·조회·수정·삭제·확정 (MEET-1·2·9·11~16). 요청 회원은 인증 principal에서 얻는다.
  *
  * <pre>
- * POST  /api/meetings
- * GET   /api/meetings
- * GET   /api/meetings/{shareToken}
- * PATCH /api/meetings/{shareToken}/confirm
+ * POST   /api/meetings
+ * GET    /api/meetings
+ * GET    /api/meetings/{shareToken}
+ * PATCH  /api/meetings/{shareToken}          수정 — 방장, 응답 들어오기 전까지만
+ * DELETE /api/meetings/{shareToken}          삭제 — 방장
+ * PATCH  /api/meetings/{shareToken}/confirm
  * </pre>
  */
 @RestController
@@ -66,6 +70,26 @@ public class MeetingController {
     public ResponseEntity<ApiResponse<MeetingDetailResponse>> getMeeting(@PathVariable String shareToken) {
         MeetingDetailResponse meeting = MeetingDetailResponse.from(meetingService.getByShareToken(shareToken));
         return ResponseEntity.ok(ApiResponse.of(meeting, SuccessCode.GET_SUCCESS));
+    }
+
+    @PatchMapping("/{shareToken}")
+    public ResponseEntity<ApiResponse<MeetingDetailResponse>> updateMeeting(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable String shareToken,
+            @Valid @RequestBody MeetingUpdateRequest request
+    ) {
+        MeetingDetailResponse meeting = MeetingDetailResponse.from(
+                meetingService.update(shareToken, userDetails.getMemberId(), request));
+        return ResponseEntity.ok(ApiResponse.of(meeting, SuccessCode.PUT_SUCCESS));
+    }
+
+    @DeleteMapping("/{shareToken}")
+    public ResponseEntity<ApiResponse<Void>> deleteMeeting(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable String shareToken
+    ) {
+        meetingService.delete(shareToken, userDetails.getMemberId());
+        return ResponseEntity.ok(ApiResponse.of(null, SuccessCode.DELETE_SUCCESS));
     }
 
     @PatchMapping("/{shareToken}/confirm")

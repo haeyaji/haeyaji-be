@@ -21,11 +21,13 @@ public enum MeetingErrorCode implements ResponseCode {
     CANDIDATE_DATE_TOO_FAR(HttpStatus.BAD_REQUEST, "후보 날짜는 오늘부터 2개월 이내여야 합니다."),
     MEETING_EXPIRED(HttpStatus.GONE, "만료된 약속입니다."),
     MEETING_ALREADY_CONFIRMED(HttpStatus.CONFLICT, "이미 확정된 약속입니다."),
-    NOT_MEETING_CREATOR(HttpStatus.FORBIDDEN, "약속 생성자만 확정할 수 있습니다."),
+    NOT_MEETING_CREATOR(HttpStatus.FORBIDDEN, "약속 생성자만 할 수 있는 작업입니다."),
     NOT_MEETING_PARTICIPANT(HttpStatus.FORBIDDEN, "약속에 먼저 참여해야 응답할 수 있습니다."),
     INVALID_MEETING_SLOT(HttpStatus.BAD_REQUEST, "약속에 존재하지 않는 시간 칸입니다."),
     INVALID_CONFIRM_RANGE(HttpStatus.BAD_REQUEST, "확정 시간 범위가 올바르지 않습니다."),
     ALREADY_RESPONDED_INVITATION(HttpStatus.CONFLICT, "이미 응답한 초대입니다."),
+    MEETING_ALREADY_RESPONDED(HttpStatus.CONFLICT, "이미 응답이 있어 수정할 수 없습니다."),
+    INCOMPLETE_TIME_GRID(HttpStatus.BAD_REQUEST, "시간 범위를 바꾸려면 날짜·시작·종료·슬롯 단위를 모두 보내야 합니다."),
     ;
 
     private final HttpStatus status;

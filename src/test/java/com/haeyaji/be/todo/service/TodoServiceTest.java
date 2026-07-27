@@ -46,7 +46,7 @@ class TodoServiceTest {
     }
 
     private TodoUpdateRequest updateRequest(String title, Boolean pinned, Integer sortOrder, Boolean completed) {
-        return new TodoUpdateRequest(title, null, null, null, null, null, null, pinned, sortOrder, completed);
+        return new TodoUpdateRequest(null, title, null, null, null, null, null, null, pinned, sortOrder, completed);
     }
 
     private TodoEntity entity(String title, LocalTime startTime, String placeName, String placeUrl,
@@ -145,7 +145,7 @@ class TodoServiceTest {
         TodoService service = new TodoService(repo, mock(TodoParticipantRepository.class), labelRepo, fixedClock);
 
         Todo todo = service.updateTodo(MEMBER_ID, id,
-                new TodoUpdateRequest(null, null, null, null, null, null, labelId, null, null, null));
+                new TodoUpdateRequest(null, null, null, null, null, null, null, labelId, null, null, null));
 
         assertThat(todo.labelId()).isEqualTo(labelId);
     }
@@ -160,7 +160,7 @@ class TodoServiceTest {
         TodoService service = new TodoService(repo, mock(TodoParticipantRepository.class), labelRepo, fixedClock);
 
         assertThatThrownBy(() -> service.updateTodo(MEMBER_ID, id,
-                new TodoUpdateRequest(null, null, null, null, null, null, labelId, null, null, null)))
+                new TodoUpdateRequest(null, null, null, null, null, null, null, labelId, null, null, null)))
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.NOT_FOUND);

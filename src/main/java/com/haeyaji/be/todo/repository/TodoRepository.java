@@ -1,9 +1,11 @@
 package com.haeyaji.be.todo.repository;
 
 import com.haeyaji.be.todo.domain.TodoSource;
+import com.haeyaji.be.todo.domain.TodoStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,4 +30,16 @@ public interface TodoRepository extends JpaRepository<TodoEntity, UUID> {
 
     /** 개인화 distill: 최근 AI 추천으로 담은 할 일(제목/장소를 recentSelections 근거로 사용). */
     List<TodoEntity> findTop10ByMemberIdAndSourceOrderByCreatedAtDesc(UUID memberId, TodoSource source);
+
+    /**
+     * 시작 시간 알림 대상. 시간을 정해둔 미완료 할 일만 본다 — 시간이 없으면 언제 알릴지 정할 수 없고,
+     * 이미 끝낸 일은 알릴 이유가 없다.
+     * <p>약속에서 자동 생성된 할 일은 제외한다 — 같은 약속을 MEETING_REMINDER가 이미 알린다.
+     */
+    List<TodoEntity> findByTodoDateAndStartTimeBetweenAndStatusAndSourceNot(
+            LocalDate todoDate, LocalTime from, LocalTime to, TodoStatus status, TodoSource source);
+
+    /** 날씨 알림 대상. 좌표가 있어야 그 자리 날씨를 볼 수 있으므로 장소를 붙인 할 일만 본다. */
+    List<TodoEntity> findByTodoDateAndStatusAndLatIsNotNullAndLngIsNotNull(
+            LocalDate todoDate, TodoStatus status);
 }

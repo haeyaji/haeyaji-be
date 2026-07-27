@@ -36,10 +36,12 @@ public class NotificationService {
     private static final Set<NotificationType> IDEMPOTENT_TYPES =
             Set.of(NotificationType.TODO_REMINDER, NotificationType.MEETING_REMINDER, NotificationType.TODO_WEATHER_ALERT);
 
-    public CursorPageResponse<Notification, UUID> getNotifications(UUID memberId, NotificationType type, UUID cursorId, int size) {
+    public CursorPageResponse<Notification, UUID> getNotifications(
+            UUID memberId, NotificationCategory category, NotificationType type, UUID cursorId, int size) {
 
         // hasNext, nextCursor 판단을 위해 size + 1만큼 조회
-        List<Notification> notiList = notificationRepository.getNotifications(memberId, type, cursorId, size + 1);
+        List<Notification> notiList =
+                notificationRepository.getNotifications(memberId, category, type, cursorId, size + 1);
 
         boolean hasNext = false;
         UUID nextCursor = null;

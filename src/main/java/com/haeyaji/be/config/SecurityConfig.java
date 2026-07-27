@@ -7,6 +7,7 @@ import com.haeyaji.be.member.oauth.error.JwtAccessDeniedHandler;
 import com.haeyaji.be.member.oauth.error.JwtAuthenticationEntryPoint;
 import com.haeyaji.be.member.oauth.oauth2.CustomOAuth2UserService;
 import com.haeyaji.be.member.oauth.oidc.CustomOidcUserService;
+import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -63,6 +64,10 @@ public class SecurityConfig {
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class)
 
                 .authorizeHttpRequests(auth -> auth
+                        // SSE(알림 스트림)처럼 비동기로 처리하는 요청은 끝날 때 ASYNC 디스패치로 필터체인을 한 번 더 탄다.
+                        // 이때 SecurityContext는 이미 비워져 있어 인증 검사를 다시 걸면 무조건 Access Denied가 나고,
+                        // 응답은 이미 커밋된 뒤라 500 스택트레이스만 로그에 쌓인다. 최초 진입에서 이미 인증했으므로 재디스패치는 통과시킨다.
+                        .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR).permitAll()
                         .requestMatchers("/", "/login/**", "/oauth2/**", "/auth/reissue", "/weather/**", "/places/**", "/message").permitAll()
                         .anyRequest().authenticated())
 

@@ -8,7 +8,6 @@
 --    (nickname NOT NULL / kakao_id·friend_code NOT NULL 등, #61).
 --
 -- 참고: 컬럼 설명·설계 의도는 docs/haeyaji-erd.dbml, docs/haeyaji-schema.sql 참조(문서 전용).
--- notification 테이블은 알림 도메인 엔티티가 생기면 ddl-auto가 생성한다(현재 코드에 없어 미포함).
 -- =====================================================================
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
@@ -155,6 +154,26 @@ CREATE TABLE `member_preference` (
   `preferred_categories` json DEFAULT NULL,
   `vibe` varchar(20) DEFAULT NULL,
   PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `notification` (
+  `id` binary(16) NOT NULL,
+  `createdAt` datetime(6) DEFAULT NULL,
+  `body` varchar(255) DEFAULT NULL,
+  `category` enum('FRIEND','INVITE','TODO') NOT NULL,
+  `link_token` varchar(64) DEFAULT NULL,
+  `member_id` binary(16) NOT NULL,
+  `is_read` bit(1) NOT NULL,
+  `read_at` datetime(6) DEFAULT NULL,
+  `ref_id` binary(16) DEFAULT NULL,
+  `title` varchar(100) NOT NULL,
+  `type` enum('FRIEND_REQUEST','FRIEND_RESPONSE','MEETING_CONFIRMED','MEETING_INVITE','MEETING_INVITE_RESPONSE','MEETING_REMINDER','SHARE_INVITE','SHARE_INVITE_RESPONSE','TODO_REMINDER','TODO_SHARED_UPDATED','TODO_WEATHER_ALERT') NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_noti_idem` (`member_id`,`type`,`ref_id`),
+  KEY `idx_noti_inbox` (`member_id`,`id`),
+  KEY `idx_noti_unread` (`member_id`,`is_read`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;

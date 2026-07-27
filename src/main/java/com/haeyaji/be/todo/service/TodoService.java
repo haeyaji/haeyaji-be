@@ -141,11 +141,22 @@ public class TodoService {
         return entity.toDomain();
     }
 
+    /**
+     * 삭제 = "내 목록에서 없앤다". 소유자면 할 일 자체를 지우고(공유 참여자 행도 함께 정리),
+     * 공유받은 사람이면 원본은 두고 <b>내 참여만 해제</b>한다(SHARE-6 나가기와 동일 효과) —
+     * 공유받은 쪽이 남의 할 일을 지워버리면 안 되기 때문.
+     */
     @Transactional
     public void deleteTodo(UUID memberId, UUID id) {
-        TodoEntity entity = todoRepository.findByIdAndMemberId(id, memberId)
+        Optional<TodoEntity> owned = todoRepository.findByIdAndMemberId(id, memberId);
+        if (owned.isPresent()) {
+            todoParticipantRepository.deleteByTodoId(id); // 고아 참여자 행 방지(FK 없음)
+            todoRepository.delete(owned.get());
+            return;
+        }
+        TodoParticipantEntity participant = todoParticipantRepository.findByTodoIdAndMemberId(id, memberId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
-        todoRepository.delete(entity);
+        todoParticipantRepository.delete(participant);
     }
 
     private TodoEntity findEditableTodo(UUID memberId, UUID id) {

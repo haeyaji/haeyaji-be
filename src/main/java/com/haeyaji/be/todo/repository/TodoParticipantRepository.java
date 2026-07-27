@@ -16,4 +16,7 @@ public interface TodoParticipantRepository extends JpaRepository<TodoParticipant
     List<TodoParticipantEntity> findByTodoId(UUID todoId);
 
     List<TodoParticipantEntity> findByMemberIdAndInviteStatus(UUID memberId, InviteStatus inviteStatus);
+
+    /** 소유자가 할 일을 지울 때 참여자 행이 고아로 남지 않게 함께 정리(실제 FK 제약이 없다). */
+    void deleteByTodoId(UUID todoId);
 }

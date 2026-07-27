@@ -76,8 +76,6 @@ public class TodoService {
         if (request.labelId() != null) {
             requireOwnedLabel(memberId, request.labelId());
         }
-        // 공개 생성 엔드포인트라 클라가 source를 임의 지정(ROUTINE/MEETING 위장 등) 못 하게 항상 MANUAL로 고정한다(L5).
-        // ROUTINE/MEETING 출처는 각자의 전용 생성 경로(TodoEntity.createFromRoutine 등)로만 만들어진다.
         boolean pinned = request.pinned() != null ? request.pinned() : false;
         int sortOrder = request.sortOrder() != null ? request.sortOrder() : 0;
         TodoEntity entity = TodoEntity.create(
@@ -90,11 +88,22 @@ public class TodoService {
                 request.lat(),
                 request.lng(),
                 request.labelId(),
-                TodoSource.MANUAL,
+                resolveClientSource(request.source()),
                 pinned,
                 sortOrder
         );
         return todoRepository.save(entity).toDomain();
+    }
+
+    /**
+     * 클라이언트가 지정할 수 있는 출처는 {@link TodoSource#MANUAL}·{@link TodoSource#AI} 둘뿐이다 (TODO-3).
+     * <p>AI는 "추천을 담았다"는 개인화 신호({@code recentSelections})로 쓰이며, 위장해봐야 자기 추천 품질만
+     * 나빠질 뿐 다른 회원·시스템 무결성에는 영향이 없다. 반면 ROUTINE/MEETING은 중복방지 키
+     * {@code (todo_date, source, source_ref_id)}와 약속 연동에 쓰이므로 위장 시 무결성이 깨진다 —
+     * 그래서 이 둘은 서버 전용 생성 경로({@code createFromRoutine}/{@code createFromMeeting})에서만 부여한다(L5).
+     */
+    private static TodoSource resolveClientSource(TodoSource requested) {
+        return requested == TodoSource.AI ? TodoSource.AI : TodoSource.MANUAL;
     }
 
     /**

@@ -85,23 +85,37 @@ public class NotificationService {
         notificationRepository.delete(noti);
     }
 
+    /**
+     *      actor가 있는 알림은 send, 없으면 sendSystem (actorId = null)
+     */
+
     @Transactional
     public Notification send(UUID actorId, UUID memberId, NotificationCategory category, NotificationType type,
-                              String title, String body, UUID refId, String linkToken) {
 
+                             String title, String body, UUID refId, String linkToken) {
         if (actorId.equals(memberId)) {
-            return null;  // 본인 행동으로 발생한 알림은 본인에게 안 보냄
+            return null;
         }
 
-        // 이미 같은 알림이 발송되었을 경우 return null (멱등)
+        return doSend(memberId, category, type, title, body, refId, linkToken);
+    }
+
+    @Transactional
+    public Notification sendSystem(UUID memberId, NotificationCategory category, NotificationType type,
+                                   String title, String body, UUID refId, String linkToken) {
+
+        return doSend(memberId, category, type, title, body, refId, linkToken);
+    }
+
+    private Notification doSend(UUID memberId, NotificationCategory category, NotificationType type,
+                                String title, String body, UUID refId, String linkToken) {
+
         if (IDEMPOTENT_TYPES.contains(type)
                 && notificationRepository.existsByMemberIdAndTypeAndRefId(memberId, type, refId)) {
             return null;
         }
 
         Notification noti = Notification.create(memberId, category, type, title, body, refId, linkToken);
-
-        // DataIntegrityViolationException 고려
         notificationRepository.save(noti);
 
         return noti;

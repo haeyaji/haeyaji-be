@@ -1,6 +1,7 @@
 package com.haeyaji.be.meeting.service;
 
 import com.haeyaji.be.common.exception.BusinessException;
+import com.haeyaji.be.meeting.domain.InviteStatus;
 import com.haeyaji.be.meeting.domain.MeetingAvailability;
 import com.haeyaji.be.meeting.domain.MeetingErrorCode;
 import com.haeyaji.be.meeting.domain.MeetingParticipant;
@@ -51,7 +52,8 @@ public class MeetingResponseService {
     @Transactional
     public List<SlotResponse> submit(String shareToken, UUID memberId, ResponseSubmitRequest request) {
         MeetingEntity meeting = meetingFinder.getCollecting(shareToken, LocalDateTime.now(clock));
-        if (!meetingParticipantRepository.existsByMeetingIdAndMemberId(meeting.getId(), memberId)) {
+        if (!meetingParticipantRepository.existsByMeetingIdAndMemberIdAndInviteStatus(
+                meeting.getId(), memberId, InviteStatus.ACCEPTED)) {
             throw new BusinessException(MeetingErrorCode.NOT_MEETING_PARTICIPANT);
         }
 
@@ -107,7 +109,7 @@ public class MeetingResponseService {
                 .collect(Collectors.groupingBy(SlotResponse::memberId));
 
         List<ParticipantResponses> participants = meetingParticipantRepository
-                .findByMeetingIdOrderByJoinedAt(meeting.getId()).stream()
+                .findByMeetingIdAndInviteStatusOrderByJoinedAt(meeting.getId(), InviteStatus.ACCEPTED).stream()
                 .map(MeetingParticipantEntity::toDomain)
                 .map(participant -> new ParticipantResponses(
                         participant,
@@ -122,7 +124,8 @@ public class MeetingResponseService {
         List<MeetingSlot> slots = loadSlots(meeting.getId());
         List<SlotResponse> responses = loadResponses(
                 slots.stream().map(MeetingSlot::id).collect(Collectors.toSet()));
-        long participantCount = meetingParticipantRepository.countByMeetingId(meeting.getId());
+        long participantCount = meetingParticipantRepository.countByMeetingIdAndInviteStatus(
+                meeting.getId(), InviteStatus.ACCEPTED);
         return MeetingAvailability.of(slots, responses, Math.toIntExact(participantCount));
     }
 

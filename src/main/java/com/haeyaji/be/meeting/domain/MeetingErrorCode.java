@@ -25,6 +25,7 @@ public enum MeetingErrorCode implements ResponseCode {
     NOT_MEETING_PARTICIPANT(HttpStatus.FORBIDDEN, "약속에 먼저 참여해야 응답할 수 있습니다."),
     INVALID_MEETING_SLOT(HttpStatus.BAD_REQUEST, "약속에 존재하지 않는 시간 칸입니다."),
     INVALID_CONFIRM_RANGE(HttpStatus.BAD_REQUEST, "확정 시간 범위가 올바르지 않습니다."),
+    ALREADY_RESPONDED_INVITATION(HttpStatus.CONFLICT, "이미 응답한 초대입니다."),
     ;
 
     private final HttpStatus status;

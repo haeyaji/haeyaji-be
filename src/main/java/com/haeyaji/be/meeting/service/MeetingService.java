@@ -2,6 +2,7 @@ package com.haeyaji.be.meeting.service;
 
 import com.haeyaji.be.common.exception.BusinessException;
 import com.haeyaji.be.meeting.domain.CandidateDates;
+import com.haeyaji.be.meeting.domain.InviteStatus;
 import com.haeyaji.be.meeting.domain.Meeting;
 import com.haeyaji.be.meeting.domain.MeetingConfirmedEvent;
 import com.haeyaji.be.meeting.domain.MeetingDetail;
@@ -79,7 +80,7 @@ public class MeetingService {
         List<UUID> meetingIds = meetings.stream().map(MeetingEntity::getId).toList();
         Map<UUID, Long> participantCounts = meetingIds.isEmpty()
                 ? Map.of()
-                : meetingParticipantRepository.countByMeetingIds(meetingIds).stream()
+                : meetingParticipantRepository.countByMeetingIds(meetingIds, InviteStatus.ACCEPTED).stream()
                         .collect(Collectors.toMap(MeetingParticipantCount::meetingId, MeetingParticipantCount::count));
         LocalDateTime now = LocalDateTime.now(clock);
         return meetings.stream()
@@ -135,7 +136,7 @@ public class MeetingService {
                 meetingTimeSlotRepository.findByMeetingIdOrderBySlotStartAt(meetingId).stream()
                         .map(MeetingTimeSlotEntity::toDomain)
                         .toList(),
-                meetingParticipantRepository.findByMeetingIdOrderByJoinedAt(meetingId).stream()
+                meetingParticipantRepository.findByMeetingIdAndInviteStatusOrderByJoinedAt(meetingId, InviteStatus.ACCEPTED).stream()
                         .map(MeetingParticipantEntity::toDomain)
                         .toList());
     }

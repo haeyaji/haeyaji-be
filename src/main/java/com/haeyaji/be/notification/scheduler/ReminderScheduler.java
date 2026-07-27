@@ -38,14 +38,14 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * 다가온 일정을 미리 알린다 — 할 일 시작 30분 전, 확정된 약속 1시간 전.
+ * 다가온 일정을 미리 알린다 — 할 일·확정 약속 모두 시작 10분 전(NOTI-9·NOTI-13).
  *
  * <p>주기 실행이라 같은 일정을 여러 번 집게 되는데, 중복 발송은
  * {@code notification}의 유니크 제약 {@code (member_id, type, ref_id)}가 막는다
  * (TODO_REMINDER·MEETING_REMINDER는 멱등 대상). 그래서 스케줄러는 "창(window)에 걸린 것"만
  * 단순히 훑으면 되고, 어디까지 보냈는지 따로 기록하지 않는다.
  *
- * <p>알림 시각을 "정확히 30분 전"이 아니라 "30분 안"으로 잡는 이유도 같다 — 실행이 한 번 밀려도
+ * <p>알림 시각을 "정확히 10분 전"이 아니라 "10분 안"으로 잡는 이유도 같다 — 실행이 한 번 밀려도
  * 다음 주기가 주워 담고, 이미 보낸 건 유니크 제약에 걸려 조용히 스킵된다.
  */
 @Slf4j
@@ -55,8 +55,9 @@ public class ReminderScheduler {
 
     /** 일정 시각 판단은 사용자 기준(KST)으로 한다 — 서버가 UTC로 떠 있어도 흔들리지 않게. */
     private static final ZoneId ZONE = ZoneId.of("Asia/Seoul");
-    private static final Duration TODO_LEAD = Duration.ofMinutes(30);
-    private static final Duration MEETING_LEAD = Duration.ofHours(1);
+    /** 리드타임 — 요구사항 NOTI-9·NOTI-13이 정한 10분. 주기(5분)가 이보다 촘촘해야 알림이 늦지 않는다. */
+    private static final Duration TODO_LEAD = Duration.ofMinutes(10);
+    private static final Duration MEETING_LEAD = Duration.ofMinutes(10);
     private static final DateTimeFormatter HH_MM = DateTimeFormatter.ofPattern("HH:mm");
 
     private final TodoRepository todoRepository;
@@ -67,7 +68,7 @@ public class ReminderScheduler {
     private final ReminderMailer reminderMailer;
     private final Clock clock;
 
-    /** 5분마다 훑는다 — 리드타임(30분/1시간)보다 촘촘해야 알림이 늦지 않는다. */
+    /** 5분마다 훑는다 — 리드타임(10분)보다 촘촘해야 알림이 늦지 않는다. */
     @Scheduled(cron = "${haeyaji.notification.reminder-cron:0 */5 * * * *}", zone = "Asia/Seoul")
     public void remind() {
         LocalDateTime now = LocalDateTime.now(clock.withZone(ZONE));

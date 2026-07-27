@@ -73,7 +73,7 @@ class ReminderSchedulerTest {
         schedulerAt("2026-07-27T05:00:00Z").remind(); // KST 14:00
 
         verify(todoRepository).findByTodoDateAndStartTimeBetweenAndStatusAndSourceNot(
-                eq(LocalDate.of(2026, 7, 27)), eq(LocalTime.of(14, 0)), eq(LocalTime.of(14, 30)),
+                eq(LocalDate.of(2026, 7, 27)), eq(LocalTime.of(14, 0)), eq(LocalTime.of(14, 10)),
                 eq(TodoStatus.TODO), eq(TodoSource.MEETING));
     }
 
@@ -83,12 +83,12 @@ class ReminderSchedulerTest {
         when(todoRepository.findByTodoDateAndStartTimeBetweenAndStatusAndSourceNot(
                 any(), any(), any(), any(), any())).thenReturn(List.of());
 
-        schedulerAt("2026-07-27T14:50:00Z").remind(); // KST 23:50
+        schedulerAt("2026-07-27T14:55:00Z").remind(); // KST 23:55
 
         verify(todoRepository).findByTodoDateAndStartTimeBetweenAndStatusAndSourceNot(
-                eq(LocalDate.of(2026, 7, 27)), eq(LocalTime.of(23, 50)), eq(LocalTime.MAX), any(), any());
+                eq(LocalDate.of(2026, 7, 27)), eq(LocalTime.of(23, 55)), eq(LocalTime.MAX), any(), any());
         verify(todoRepository).findByTodoDateAndStartTimeBetweenAndStatusAndSourceNot(
-                eq(LocalDate.of(2026, 7, 28)), eq(LocalTime.MIN), eq(LocalTime.of(0, 20)), any(), any());
+                eq(LocalDate.of(2026, 7, 28)), eq(LocalTime.MIN), eq(LocalTime.of(0, 5)), any(), any());
     }
 
     @Test
@@ -101,7 +101,7 @@ class ReminderSchedulerTest {
         when(todo.getId()).thenReturn(todoId);
         when(todo.getMemberId()).thenReturn(owner);
         when(todo.getTitle()).thenReturn("회의");
-        when(todo.getStartTime()).thenReturn(LocalTime.of(14, 20));
+        when(todo.getStartTime()).thenReturn(LocalTime.of(14, 5));
         when(todoRepository.findByTodoDateAndStartTimeBetweenAndStatusAndSourceNot(
                 any(), any(), any(), any(), any())).thenReturn(List.of(todo));
 
@@ -128,7 +128,7 @@ class ReminderSchedulerTest {
         when(todo.getId()).thenReturn(todoId);
         when(todo.getMemberId()).thenReturn(UUID.randomUUID());
         when(todo.getTitle()).thenReturn("회의");
-        when(todo.getStartTime()).thenReturn(LocalTime.of(14, 20));
+        when(todo.getStartTime()).thenReturn(LocalTime.of(14, 5));
         when(todoRepository.findByTodoDateAndStartTimeBetweenAndStatusAndSourceNot(
                 any(), any(), any(), any(), any())).thenReturn(List.of(todo));
         when(notificationService.sendSystem(any(), any(), any(), any(), any(), any(), any()))
@@ -146,7 +146,7 @@ class ReminderSchedulerTest {
         when(todo.getId()).thenReturn(UUID.randomUUID());
         when(todo.getMemberId()).thenReturn(owner);
         when(todo.getTitle()).thenReturn("한강 산책");
-        when(todo.getStartTime()).thenReturn(LocalTime.of(14, 20));
+        when(todo.getStartTime()).thenReturn(LocalTime.of(14, 5));
         when(todo.getPlaceName()).thenReturn("한강공원");
         when(todoRepository.findByTodoDateAndStartTimeBetweenAndStatusAndSourceNot(
                 any(), any(), any(), any(), any())).thenReturn(List.of(todo));
@@ -156,7 +156,7 @@ class ReminderSchedulerTest {
         schedulerAt("2026-07-27T05:00:00Z").remind();
 
         // 날씨 문구는 이 배치가 알 수 없다 — 궂은 날씨는 WeatherAlertScheduler가 따로 알린다.
-        verify(reminderMailer).send(eq(owner), eq("한강 산책"), eq(LocalTime.of(14, 20)), eq("한강공원"), eq(null));
+        verify(reminderMailer).send(eq(owner), eq("한강 산책"), eq(LocalTime.of(14, 5)), eq("한강공원"), eq(null));
     }
 
     @Test

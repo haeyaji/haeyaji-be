@@ -17,6 +17,9 @@ public interface TodoParticipantRepository extends JpaRepository<TodoParticipant
 
     List<TodoParticipantEntity> findByMemberIdAndInviteStatus(UUID memberId, InviteStatus inviteStatus);
 
+    /** 여러 할 일의 참여자를 한 번에 — 리마인더가 할 일마다 조회하면 쿼리가 건수만큼 늘어난다. */
+    List<TodoParticipantEntity> findByTodoIdInAndInviteStatus(java.util.Collection<UUID> todoIds, InviteStatus inviteStatus);
+
     /** 소유자가 할 일을 지울 때 참여자 행이 고아로 남지 않게 함께 정리(실제 FK 제약이 없다). */
     void deleteByTodoId(UUID todoId);
 }

@@ -12,6 +12,7 @@ import com.haeyaji.be.notification.redis.NotificationRedisPublisher;
 import com.haeyaji.be.notification.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -92,7 +93,9 @@ public class NotificationService {
      *      actor가 있는 알림은 send, 없으면 sendSystem (actorId = null)
      */
 
-    @Transactional
+    // AFTER_COMMIT 이벤트 리스너에서 호출된다 — 이미 커밋된 트랜잭션에 REQUIRED로 참여하면
+    // 저장이 커밋되지 않고 조용히 사라진다. 그래서 새 트랜잭션에서 저장한다.
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Notification send(UUID actorId, UUID memberId, NotificationCategory category, NotificationType type,
 
                              String title, String body, UUID refId, String linkToken) {
@@ -103,7 +106,7 @@ public class NotificationService {
         return doSend(memberId, category, type, title, body, refId, linkToken);
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Notification sendSystem(UUID memberId, NotificationCategory category, NotificationType type,
                                    String title, String body, UUID refId, String linkToken) {
 

@@ -41,8 +41,9 @@ public class Notification extends ImmutableBaseEntity {
     @Column(name = "ref_id")
     private UUID refId;
 
-    // 딥링크용 토큰 (예: meeting.shareToken). 대상 리소스가 shareToken 기반으로만 조회되는 경우 사용
-    @Column(name = "link_token", length = 20)
+    // 딥링크용 토큰 (예: meeting.shareToken). 대상 리소스가 shareToken 기반으로만 조회되는 경우 사용.
+    // shareToken은 SecureRandom 256bit의 URL-safe Base64라 43자 → 20자로는 저장이 잘려 실패한다.
+    @Column(name = "link_token", length = 64)
     private String linkToken;
 
     @Column(name = "is_read", nullable = false)

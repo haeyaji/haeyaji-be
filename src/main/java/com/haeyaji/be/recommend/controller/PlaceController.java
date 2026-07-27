@@ -28,14 +28,18 @@ public class PlaceController {
 
     private final PlaceService placeService;
 
-    /** 실패·무결과도 200 + 빈 배열(nlp가 raise_for_status 로 폴백하지 않도록). */
+    /**
+     * 실패·무결과도 200 + 빈 배열(nlp가 raise_for_status 로 폴백하지 않도록).
+     * <p>{@code size}를 생략하면 <b>반경 내 전부</b>(카카오 제공 상한 45건)를 돌려준다 — 지도 탐색용.
+     * nlp 추천처럼 소수만 필요하면 size를 지정한다(지정 시 카카오 호출도 그만큼만).
+     */
     @GetMapping("/search")
     public PlacesResponse search(
             @RequestParam String query,
             @RequestParam(required = false) Double lat,
             @RequestParam(required = false) Double lng,
             @RequestParam(required = false) Integer radiusM,
-            @RequestParam(defaultValue = "5") int size,
+            @RequestParam(required = false) Integer size,
             @RequestParam(defaultValue = "accuracy") String sort,
             @RequestParam(required = false) String categoryGroupCode
     ) {

@@ -35,7 +35,9 @@ public class KakaoLocalClient {
 
     private static final String KEYWORD_PATH = "/v2/local/search/keyword.json";
     private static final int MIN_SIZE = 1;
-    private static final int MAX_SIZE = 15;      // 카카오 keyword size 상한
+    private static final int PAGE_SIZE = 15;     // 카카오 keyword 페이지당 상한
+    private static final int MAX_PAGES = 3;      // 카카오가 페이징으로 내주는 최대 45건 = 15 x 3
+    private static final int MAX_TOTAL = PAGE_SIZE * MAX_PAGES;
     private static final int MAX_RADIUS_M = 20000; // 카카오 radius 상한(m)
     private static final Duration TIMEOUT = Duration.ofSeconds(3);
 
@@ -57,34 +59,50 @@ public class KakaoLocalClient {
         this.restKey = restKey;
     }
 
+    /**
+     * 키워드 검색. {@code size}를 지정하면 그 개수까지만, <b>지정하지 않으면 반경 내 전부</b>를 모은다.
+     * <p>카카오는 한 번에 최대 15건만 주므로 필요한 만큼 페이지를 넘겨 모은다(제공 상한 45건).
+     * 페이지 경계가 어긋나지 않도록 요청 크기는 항상 15로 고정하고, 목표 개수만큼만 잘라서 반환한다.
+     * 지도 탐색은 "반경 안의 모든 후보"가 필요해 전부 받고, nlp 추천처럼 소수만 필요하면 size를 준다.
+     */
     public List<Place> search(PlaceSearchQuery q) {
-        JsonNode docs = call(uri -> {
-            UriBuilder b = uri.path(KEYWORD_PATH)
-                    .queryParam("query", q.query())
-                    .queryParam("size", clamp(q.size(), MIN_SIZE, MAX_SIZE));
-            boolean hasCenter = q.lat() != null && q.lng() != null;
-            if (hasCenter) {
-                b.queryParam("x", q.lng()).queryParam("y", q.lat()); // x=경도, y=위도
-                if (q.radiusM() != null) {
-                    b.queryParam("radius", clamp(q.radiusM(), 0, MAX_RADIUS_M));
-                }
-            }
-            // distance 정렬은 중심 좌표가 있어야 유효 → 없으면 accuracy 로 강등
-            String sort = "distance".equals(q.sort()) && hasCenter ? "distance" : "accuracy";
-            b.queryParam("sort", sort);
-            if (StringUtils.hasText(q.categoryGroupCode())) {
-                b.queryParam("category_group_code", q.categoryGroupCode());
-            }
-            return b.build();
-        });
-        if (docs == null) {
-            return List.of();
-        }
+        int target = q.size() != null ? clamp(q.size(), MIN_SIZE, MAX_TOTAL) : MAX_TOTAL;
         List<Place> places = new ArrayList<>();
-        for (JsonNode d : docs) {
-            places.add(toPlace(d));
+        for (int page = 1; page <= MAX_PAGES; page++) {
+            final int pageNo = page;
+            JsonNode docs = call(uri -> buildSearchUri(uri, q, pageNo));
+            if (docs == null || docs.isEmpty()) {
+                break;
+            }
+            for (JsonNode d : docs) {
+                places.add(toPlace(d));
+            }
+            if (docs.size() < PAGE_SIZE || places.size() >= target) {
+                break; // 마지막 페이지이거나 목표치를 채움
+            }
         }
-        return places;
+        return places.size() > target ? List.copyOf(places.subList(0, target)) : places;
+    }
+
+    private static URI buildSearchUri(UriBuilder uri, PlaceSearchQuery q, int page) {
+        UriBuilder b = uri.path(KEYWORD_PATH)
+                .queryParam("query", q.query())
+                .queryParam("size", PAGE_SIZE)
+                .queryParam("page", page);
+        boolean hasCenter = q.lat() != null && q.lng() != null;
+        if (hasCenter) {
+            b.queryParam("x", q.lng()).queryParam("y", q.lat()); // x=경도, y=위도
+            if (q.radiusM() != null) {
+                b.queryParam("radius", clamp(q.radiusM(), 0, MAX_RADIUS_M));
+            }
+        }
+        // distance 정렬은 중심 좌표가 있어야 유효 → 없으면 accuracy 로 강등
+        String sort = "distance".equals(q.sort()) && hasCenter ? "distance" : "accuracy";
+        b.queryParam("sort", sort);
+        if (StringUtils.hasText(q.categoryGroupCode())) {
+            b.queryParam("category_group_code", q.categoryGroupCode());
+        }
+        return b.build();
     }
 
     public Optional<Coordinates> geocode(String query) {

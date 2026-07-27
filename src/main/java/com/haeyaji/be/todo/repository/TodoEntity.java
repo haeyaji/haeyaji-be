@@ -113,6 +113,18 @@ public class TodoEntity extends MutableBaseEntity {
     }
 
     /**
+     * 약속 확정 시 생성(MEET-10). source=MEETING 고정, sourceRefId로 원본 약속을 추적한다.
+     * 소유자는 약속 생성자이며 나머지 참여자는 EDITOR로 공유된다.
+     */
+    public static TodoEntity createFromMeeting(UUID creatorId, String title, LocalDate todoDate,
+                                               LocalTime startTime, UUID meetingId) {
+        TodoEntity entity = create(creatorId, title, todoDate, startTime, null, null, null, null, null,
+                TodoSource.MEETING, false, 0);
+        entity.sourceRefId = meetingId;
+        return entity;
+    }
+
+    /**
      * 부분 수정. 각 파라미터가 null이면 해당 필드는 기존 값을 그대로 둔다 — 안 보낸 필드가
      * 통째로 지워지는 걸 막기 위함(TODO-4 부분수정 버그 수정).
      */

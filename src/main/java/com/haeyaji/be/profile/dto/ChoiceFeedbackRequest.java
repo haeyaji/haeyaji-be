@@ -1,6 +1,8 @@
 package com.haeyaji.be.profile.dto;
 
 import com.haeyaji.be.profile.domain.Category;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -15,10 +17,14 @@ import java.util.List;
  * @param shown    이번에 뜬 카테고리 전체(2~4개). selected 포함.
  * @param selected 고른 카테고리. 반드시 shown 안에 있어야 함.
  * @param keywords nlp가 이 선택에서 뽑은 세부 키워드(선택). 없으면 빈 목록/null.
+ * @param lat 선택 시점 위치(선택). 그때 날씨를 맥락으로 함께 학습한다 — 없으면 맑음으로 간주.
+ * @param lng 선택 시점 위치(선택).
  */
 public record ChoiceFeedbackRequest(
         @NotEmpty @Size(max = 10) List<Category> shown,
         @NotNull Category selected,
-        @Size(max = 20) List<@Size(max = 50) String> keywords
+        @Size(max = 20) List<@Size(max = 50) String> keywords,
+        @DecimalMin("-90") @DecimalMax("90") Double lat,
+        @DecimalMin("-180") @DecimalMax("180") Double lng
 ) {
 }

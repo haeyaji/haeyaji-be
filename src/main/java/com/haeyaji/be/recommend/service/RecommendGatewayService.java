@@ -44,7 +44,8 @@ public class RecommendGatewayService {
         NlpMessageRequest.UserProfile userProfile = null;
         NlpMessageRequest.ScheduleContext scheduleContext = null;
         if (memberId != null) {
-            userProfile = profileDistillService.buildUserProfile(memberId, request.mood());
+            userProfile = profileDistillService.buildUserProfile(
+                    memberId, request.mood(), request.lat(), request.lng());
             scheduleContext = buildScheduleContext(memberId);
         }
 

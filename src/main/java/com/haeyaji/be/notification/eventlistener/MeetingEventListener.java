@@ -41,8 +41,9 @@ public class MeetingEventListener {
     public void onConfirmed(MeetingConfirmedEvent event) {
         for (UUID participantId : event.participantMemberIds()) {
             try {
-                notificationService.send(
-                        null, // Todo: 행위자 정보가 이벤트에 없음
+                // MeetingInvitedEvent와 다르게 MeetingConfirmedEvent에는 actor(inviter)가 없음
+                // send() 대신 sendSystem으로 알림 발송
+                notificationService.sendSystem(
                         participantId,
                         NotificationCategory.INVITE, NotificationType.MEETING_CONFIRMED,
                         event.meetingTitle(), "eventbody", event.meetingId(),

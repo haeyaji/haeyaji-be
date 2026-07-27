@@ -8,6 +8,7 @@ import com.haeyaji.be.profile.repository.MemberKeywordWeightEntity;
 import com.haeyaji.be.profile.repository.MemberKeywordWeightRepository;
 import com.haeyaji.be.profile.repository.MemberPreferenceEntity;
 import com.haeyaji.be.profile.repository.MemberPreferenceRepository;
+import com.haeyaji.be.profile.service.WeatherContextResolver;
 import com.haeyaji.be.recommend.client.nlp.dto.NlpMessageRequest.UserProfile;
 import com.haeyaji.be.todo.domain.TodoSource;
 import com.haeyaji.be.todo.repository.TodoEntity;
@@ -38,22 +39,24 @@ public class ProfileDistillService {
     private static final int TOP_CATEGORIES = 3;
     private static final int TOP_KEYWORDS = 5;
     private static final int RECENT_TODOS = 5;
-    private static final CtxWeather DEFAULT_WEATHER = CtxWeather.CLEAR;
 
     private final MemberCategoryWeightRepository categoryWeightRepository;
     private final MemberKeywordWeightRepository keywordWeightRepository;
     private final MemberPreferenceRepository preferenceRepository;
     private final TodoRepository todoRepository;
+    private final WeatherContextResolver weatherContextResolver;
     private final Clock clock;
 
     /**
      * @param moodOverride fe가 보낸 mood(=vibe). 있으면 설문 vibe보다 우선.
      * @return 프로필이 하나도 없으면(콜드스타트) 빈 필드의 UserProfile — nlp는 프로필 없이도 동작.
      */
-    public UserProfile buildUserProfile(UUID memberId, String moodOverride) {
+    public UserProfile buildUserProfile(UUID memberId, String moodOverride, Double lat, Double lng) {
         MemberPreferenceEntity pref = preferenceRepository.findById(memberId).orElse(null);
 
-        List<String> preferredCategories = topCategories(memberId, pref);
+        // 학습할 때와 같은 기준으로 지금 날씨를 판정해야 그때 쌓은 취향을 되찾을 수 있다.
+        CtxWeather weather = weatherContextResolver.resolve(lat, lng);
+        List<String> preferredCategories = topCategories(memberId, pref, weather);
         List<String> avoid = pref != null ? pref.getAvoid() : List.of();
         String vibe = StringUtils.hasText(moodOverride) ? moodOverride
                 : (pref != null ? pref.getVibe() : null);
@@ -67,11 +70,11 @@ public class ProfileDistillService {
      * 현재 맥락(시간대+CLEAR)에서 가중치 양수인 카테고리 top-K.
      * 맥락에 데이터가 없으면 맥락 무시 top-K, 그것도 없으면 설문 preferredCategories로 폴백.
      */
-    private List<String> topCategories(UUID memberId, MemberPreferenceEntity pref) {
+    private List<String> topCategories(UUID memberId, MemberPreferenceEntity pref, CtxWeather weather) {
         CtxTimeOfDay timeOfDay = CtxTimeOfDay.from(LocalTime.now(clock));
         List<String> contextual = pickPositive(
                 categoryWeightRepository.findByMemberIdAndCtxWeatherAndCtxTimeOfDayOrderByWeightDesc(
-                        memberId, DEFAULT_WEATHER, timeOfDay));
+                        memberId, weather, timeOfDay));
         if (!contextual.isEmpty()) {
             return contextual;
         }

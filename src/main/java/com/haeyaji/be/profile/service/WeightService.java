@@ -29,11 +29,11 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class WeightService {
 
-    private static final CtxWeather DEFAULT_WEATHER = CtxWeather.CLEAR;
     private static final int KEYWORD_MAX_LEN = 50;
 
     private final MemberCategoryWeightRepository categoryWeightRepository;
     private final MemberKeywordWeightRepository keywordWeightRepository;
+    private final WeatherContextResolver weatherContextResolver;
     private final Clock clock;
 
     /**
@@ -42,12 +42,15 @@ public class WeightService {
      * 세부 키워드(있으면) SELECTED(+2). {@code selected}가 {@code shown}에 없으면 shown에 편입해 처리한다.
      */
     @Transactional
-    public void applyChoice(UUID memberId, List<Category> shown, Category selected, List<String> keywords) {
-        applyCategorySignal(memberId, selected, Signal.SELECTED);
+    public void applyChoice(UUID memberId, List<Category> shown, Category selected,
+                            List<String> keywords, Double lat, Double lng) {
+        // 같은 사람도 비 오는 날과 맑은 날의 취향이 다르므로 그 시점 날씨를 맥락으로 함께 쌓는다.
+        CtxWeather weather = weatherContextResolver.resolve(lat, lng);
+        applyCategorySignal(memberId, selected, Signal.SELECTED, weather);
         if (shown != null) {
             for (Category c : shown) {
                 if (c != null && c != selected) {
-                    applyCategorySignal(memberId, c, Signal.NOT_SELECTED);
+                    applyCategorySignal(memberId, c, Signal.NOT_SELECTED, weather);
                 }
             }
         }
@@ -60,10 +63,10 @@ public class WeightService {
 
     /** 카테고리 신호 원자적 누적. 없으면 delta로 생성, 있으면 += delta. */
     @Transactional
-    public void applyCategorySignal(UUID memberId, Category category, Signal signal) {
+    public void applyCategorySignal(UUID memberId, Category category, Signal signal, CtxWeather weather) {
         CtxTimeOfDay timeOfDay = CtxTimeOfDay.from(LocalTime.now(clock));
         categoryWeightRepository.upsertWeight(
-                toBytes(memberId), DEFAULT_WEATHER.name(), timeOfDay.name(),
+                toBytes(memberId), weather.name(), timeOfDay.name(),
                 category.name(), signal.getDelta());
     }
 

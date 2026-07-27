@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 추천 피드백 신호 수집(FR-7). 인증 필수(SecurityConfig permitAll 밖).
  *
  * <pre>
- * POST /api/recommend/feedback/choice   {shown, selected, keywords?}
+ * POST /api/recommend/feedback/choice   {shown, selected, keywords?, lat?, lng?}
  *   → 고른 카테고리 +2, 같이 뜬 안 고른 것 각 −0.05, 키워드 +2 (fire-and-forget)
  * </pre>
  */
@@ -34,7 +34,8 @@ public class FeedbackController {
             @Valid @RequestBody ChoiceFeedbackRequest request
     ) {
         weightService.applyChoice(
-                userDetails.getMemberId(), request.shown(), request.selected(), request.keywords());
+                userDetails.getMemberId(), request.shown(), request.selected(), request.keywords(),
+                request.lat(), request.lng());
         return ApiResponse.of(null, SuccessCode.POST_SUCCESS);
     }
 }

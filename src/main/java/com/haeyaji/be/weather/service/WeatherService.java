@@ -1,5 +1,6 @@
 package com.haeyaji.be.weather.service;
 
+import com.haeyaji.be.common.cache.RedisCacheStore;
 import com.haeyaji.be.weather.client.airquality.AirKoreaClient;
 import com.haeyaji.be.weather.client.kma.KmaMidTermWeatherClient;
 import com.haeyaji.be.weather.client.kma.KmaNowcastClient;
@@ -47,8 +48,8 @@ public class WeatherService {
     private static final int MID_MAX_AHEAD_DAYS = 10;
     /** 오늘 조회 캐시 TTL(분). 초단기 반영을 위해 기본 TTL보다 짧게. */
     private static final long TODAY_CACHE_TTL_MINUTES = 10;
-    /** 응답 캐시 최대 엔트리 수(메모리 상한). 좌표×날짜 무한 적재 방지. */
-    private static final int MAX_CACHE_ENTRIES = 10_000;
+    /** 캐시 키 접두사 — 다른 용도의 Redis 키와 섞이지 않게. */
+    private static final String CACHE_PREFIX = "weather:v1:";
 
     private final KmaWeatherClient shortTermProvider;
     private final KmaMidTermWeatherClient midTermProvider;
@@ -58,7 +59,7 @@ public class WeatherService {
     private final AirKoreaClient airQualityProvider;
     private final Duration cacheTtl;
     private final Clock clock;
-    private final Map<String, CacheEntry> cache = new ConcurrentHashMap<>();
+    private final RedisCacheStore cacheStore;
 
     @Autowired
     public WeatherService(KmaWeatherClient shortTermProvider,
@@ -67,9 +68,10 @@ public class WeatherService {
                           KmaUltraForecastClient ultraForecastProvider,
                           KmaUvClient uvIndexProvider,
                           AirKoreaClient airQualityProvider,
+                          RedisCacheStore cacheStore,
                           @Value("${haeyaji.weather.kma.cache-ttl-minutes:30}") long cacheTtlMinutes) {
         this(shortTermProvider, midTermProvider, nowcastProvider, ultraForecastProvider,
-                uvIndexProvider, airQualityProvider, cacheTtlMinutes, Clock.systemDefaultZone());
+                uvIndexProvider, airQualityProvider, cacheStore, cacheTtlMinutes, Clock.systemDefaultZone());
     }
 
     WeatherService(KmaWeatherClient shortTermProvider,
@@ -78,6 +80,7 @@ public class WeatherService {
                    KmaUltraForecastClient ultraForecastProvider,
                    KmaUvClient uvIndexProvider,
                    AirKoreaClient airQualityProvider,
+                   RedisCacheStore cacheStore,
                    long cacheTtlMinutes, Clock clock) {
         this.shortTermProvider = shortTermProvider;
         this.midTermProvider = midTermProvider;
@@ -85,6 +88,7 @@ public class WeatherService {
         this.ultraForecastProvider = ultraForecastProvider;
         this.uvIndexProvider = uvIndexProvider;
         this.airQualityProvider = airQualityProvider;
+        this.cacheStore = cacheStore;
         this.cacheTtl = Duration.ofMinutes(cacheTtlMinutes);
         this.clock = clock;
     }
@@ -93,10 +97,9 @@ public class WeatherService {
         LocalDate date = normalizeDate(query.date());
         String key = cacheKey(query.lat(), query.lng(), date);
 
-        CacheEntry cached = cache.get(key);
-        Instant now = clock.instant();
-        if (cached != null && cached.expiresAt().isAfter(now)) {
-            return cached.weather();
+        Weather cached = cacheStore.get(key, Weather.class);
+        if (cached != null) {
+            return cached;
         }
 
         boolean today = date.isEqual(LocalDate.now(clock));
@@ -106,10 +109,9 @@ public class WeatherService {
         }
         weather = enrich(weather, query.lat(), query.lng(), date);
 
-        // 오늘은 초단기(매시 갱신) 반영을 위해 짧은 TTL 사용
+        // 오늘은 초단기(매시 갱신) 반영을 위해 짧은 TTL 사용. 만료는 Redis가 처리한다.
         Duration ttl = today ? Duration.ofMinutes(TODAY_CACHE_TTL_MINUTES) : cacheTtl;
-        evictIfOverflow(now);
-        cache.put(key, new CacheEntry(weather, now.plus(ttl)));
+        cacheStore.put(key, weather, ttl);
         return weather;
     }
 
@@ -222,26 +224,9 @@ public class WeatherService {
         return requested;
     }
 
-    /**
-     * 캐시 메모리 상한 관리. 좌표×날짜 조합이 무한 적재되는 것을 막는다(공개 엔드포인트 DoS 대비).
-     * 우선 만료 엔트리를 제거하고, 그래도 상한을 넘으면(신선 엔트리만 가득) 전체를 비운다
-     * (하위 KMA 캐시와 동일한 clear 관례).
-     */
-    private void evictIfOverflow(Instant now) {
-        if (cache.size() < MAX_CACHE_ENTRIES) {
-            return;
-        }
-        cache.entrySet().removeIf(e -> !e.getValue().expiresAt().isAfter(now));
-        if (cache.size() >= MAX_CACHE_ENTRIES) {
-            cache.clear();
-        }
-    }
-
     private String cacheKey(double lat, double lng, LocalDate date) {
         // 좌표는 소수점 3자리(~100m)로 반올림해 인접 재호출을 같은 키로 묶는다.
-        return "%.3f:%.3f:%s".formatted(lat, lng, date);
+        return CACHE_PREFIX + "%.3f:%.3f:%s".formatted(lat, lng, date);
     }
 
-    private record CacheEntry(Weather weather, Instant expiresAt) {
-    }
 }

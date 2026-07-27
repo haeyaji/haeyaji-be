@@ -1,5 +1,6 @@
 package com.haeyaji.be.weather.client.kma;
 
+import com.haeyaji.be.common.cache.RedisCacheStore;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import com.haeyaji.be.common.exception.BusinessException;
@@ -19,7 +20,6 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 중기예보 아웃바운드 어댑터. 두 소스를 합쳐 하루 단위 {@link Weather} 로 매핑한다.
@@ -40,11 +40,16 @@ public class KmaMidTermWeatherClient {
     private final ObjectMapper objectMapper;
     private final String authKey;
     /** landRegId|tmFc → 육상예보 item. 중기예보는 하루 2회 발표라 발표시각 키로 재사용. */
-    private final Map<String, JsonNode> landCache = new ConcurrentHashMap<>();
+    /** 중기예보는 하루 2회(06/18시) 발표 — 키에 발표시각이 들어가므로 TTL은 그 주기를 덮으면 된다. */
+    private static final Duration CACHE_TTL = Duration.ofHours(13);
+    private static final String LAND_PREFIX = "kma:mid:land:v1:";
+    private static final String TEMP_PREFIX = "kma:mid:temp:v1:";
+
+    private final RedisCacheStore cacheStore;
     /** taRegId|tmFc|ymd → 최저/최고기온. */
-    private final Map<String, MinMax> tempCache = new ConcurrentHashMap<>();
 
     public KmaMidTermWeatherClient(ObjectMapper objectMapper,
+                                   RedisCacheStore cacheStore,
                                    @Value("${haeyaji.weather.kma.mid.land-base-url}") String landBaseUrl,
                                    @Value("${haeyaji.weather.kma.mid.ta-base-url}") String taBaseUrl,
                                    @Value("${haeyaji.weather.kma.auth-key:}") String authKey) {
@@ -52,6 +57,7 @@ public class KmaMidTermWeatherClient {
         this.landClient = WebClient.builder().baseUrl(landBaseUrl).build();
         this.taClient = WebClient.builder().baseUrl(taBaseUrl).build();
         this.objectMapper = objectMapper;
+        this.cacheStore = cacheStore;
         this.authKey = authKey;
     }
 
@@ -119,16 +125,15 @@ public class KmaMidTermWeatherClient {
 
     /** 중기육상예보 item 노드 (발표시각 캐시). */
     private JsonNode callLand(String regId, String tmFc) {
-        String key = regId + "|" + tmFc;
-        JsonNode cached = landCache.get(key);
+        String key = LAND_PREFIX + regId + "|" + tmFc;
+        JsonNode cached = cacheStore.get(key, JsonNode.class);
         if (cached != null) {
             return cached;
         }
         JsonNode item = requestLand(regId, tmFc);
-        if (landCache.size() > 128) {
-            landCache.clear(); // 지난 발표시각 키 정리
+        if (item != null) {
+            cacheStore.put(key, item, CACHE_TTL);
         }
-        landCache.put(key, item);
         return item;
     }
 
@@ -174,17 +179,14 @@ public class KmaMidTermWeatherClient {
      */
     private MinMax callTemp(String regId, String tmFc, LocalDate date) {
         String targetYmd = date.format(YMD);
-        String key = regId + "|" + tmFc + "|" + targetYmd;
-        MinMax cached = tempCache.get(key);
+        String key = TEMP_PREFIX + regId + "|" + tmFc + "|" + targetYmd;
+        MinMax cached = cacheStore.get(key, MinMax.class);
         if (cached != null) {
             return cached;
         }
         MinMax result = requestTemp(regId, tmFc, targetYmd);
         if (result != null) {
-            if (tempCache.size() > 256) {
-                tempCache.clear();
-            }
-            tempCache.put(key, result); // 결측은 캐시 안 함(다음에 재시도)
+            cacheStore.put(key, result, CACHE_TTL); // 결측은 캐시 안 함(다음에 재시도)
         }
         return result;
     }

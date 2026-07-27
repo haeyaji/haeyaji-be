@@ -173,10 +173,10 @@ class TodoServiceTest {
         when(repo.findByMemberIdAndTodoDateOrderByPinnedDescSortOrderAscCreatedAtAsc(MEMBER_ID, TODAY)).thenReturn(List.of(saved));
         TodoService service = new TodoService(repo, mock(TodoParticipantRepository.class), mock(LabelRepository.class), fixedClock);
 
-        List<Todo> todos = service.getTodosByDate(MEMBER_ID, TODAY);
+        List<TodoView> todos = service.getTodosByDate(MEMBER_ID, TODAY, null);
 
         assertThat(todos).hasSize(1);
-        assertThat(todos.get(0).title()).isEqualTo("제목");
+        assertThat(todos.get(0).todo().title()).isEqualTo("제목");
     }
 
     @Test

@@ -15,6 +15,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
+import com.haeyaji.be.todo.service.TodoView;
+
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -48,13 +50,13 @@ class TodoControllerTest {
     @Test
     void 목록조회는_완료_전체_개수를_함께_반환한다() {
         TodoService service = mock(TodoService.class);
-        when(service.getTodosByDate(MEMBER_ID, DATE)).thenReturn(List.of(
-                todo("완료된일", TodoStatus.DONE),
-                todo("안한일", TodoStatus.TODO)
+        when(service.getTodosByDate(MEMBER_ID, DATE, null)).thenReturn(List.of(
+                TodoView.owned(todo("완료된일", TodoStatus.DONE)),
+                TodoView.owned(todo("안한일", TodoStatus.TODO))
         ));
         TodoController controller = new TodoController(service);
 
-        ApiResponse<TodoListResponse> response = controller.getTodos(USER, DATE);
+        ApiResponse<TodoListResponse> response = controller.getTodos(USER, DATE, null);
 
         assertThat(response.success()).isTrue();
         assertThat(response.data().total()).isEqualTo(2);

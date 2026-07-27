@@ -31,8 +31,12 @@ public class MemberService {
         return member;
     }
 
+    /**
+     * 온보딩 프로필 저장. 닉네임은 필수·유일, 이메일은 선택(주면 갱신, 없으면 기존 유지).
+     * 이메일은 알림 메일 수신 주소로 쓰인다 — 소셜에서 제공받지 못한 회원이 여기서 직접 채운다.
+     */
     @Transactional
-    public Member updateNickname(UUID memberId, String nickname) {
+    public Member updateNickname(UUID memberId, String nickname, String email) {
 
         // 1) 사전 중복 체크 (일반적인 케이스에서 바로 명확한 에러 메시지를 주기 위함)
         if (memberRepository.existsByNickname(nickname)) {
@@ -43,6 +47,9 @@ public class MemberService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
 
         member.assignNickname(nickname);
+        if (email != null && !email.isBlank()) {
+            member.update(email);
+        }
 
         // 2) 최종 방어선: 사전 체크 이후 동시에 같은 닉네임으로 요청이 들어와도
         // nickname 컬럼의 unique 제약이 막아준다. saveAndFlush로 즉시 반영시켜야

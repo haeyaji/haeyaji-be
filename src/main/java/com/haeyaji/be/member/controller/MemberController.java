@@ -29,7 +29,7 @@ public class MemberController {
     @PatchMapping("/me/nickname")
     public ApiResponse<Void> updateNickname(@AuthenticationPrincipal CustomUserDetails userDetails,
                                              @Valid @RequestBody NicknameUpdateRequest request) {
-        memberService.updateNickname(userDetails.getMemberId(), request.nickname());
+        memberService.updateNickname(userDetails.getMemberId(), request.nickname(), request.email());
         return ApiResponse.of(null, SuccessCode.PUT_SUCCESS);
     }
 

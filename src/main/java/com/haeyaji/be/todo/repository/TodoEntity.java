@@ -128,9 +128,10 @@ public class TodoEntity extends MutableBaseEntity {
      * 부분 수정. 각 파라미터가 null이면 해당 필드는 기존 값을 그대로 둔다 — 안 보낸 필드가
      * 통째로 지워지는 걸 막기 위함(TODO-4 부분수정 버그 수정).
      */
-    public void update(String title, LocalTime startTime,
+    public void update(LocalDate todoDate, String title, LocalTime startTime,
             String placeName, String placeUrl, Double lat, Double lng, UUID labelId,
             Boolean pinned, Integer sortOrder) {
+        if (todoDate != null) this.todoDate = todoDate;
         if (title != null) this.title = title;
         if (startTime != null) this.startTime = startTime;
         if (placeName != null) this.placeName = placeName;

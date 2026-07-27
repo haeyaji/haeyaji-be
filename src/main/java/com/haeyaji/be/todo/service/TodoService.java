@@ -120,6 +120,23 @@ public class TodoService {
     }
 
     /**
+     * 날짜 이동 가능 여부 검사 (TODO-4). 생성과 같은 규칙으로 과거로는 못 옮기고(KST 기준),
+     * 루틴·약속에서 자동 생성된 할 일은 옮긴 자리에 이미 같은 출처의 할 일이 있으면 거절한다 —
+     * 중복방지 키 {@code (todo_date, source, source_ref_id)}가 깨지면 자동 등록이 중복 생성되기 때문.
+     */
+    private void requireMovableTo(TodoEntity entity, LocalDate newDate) {
+        if (newDate.isBefore(LocalDate.now(clock.withZone(ZONE)))) {
+            throw new BusinessException(ErrorCode.PAST_DATE_NOT_ALLOWED);
+        }
+        if (entity.getSourceRefId() != null
+                && !newDate.equals(entity.getTodoDate())
+                && todoRepository.existsByTodoDateAndSourceAndSourceRefId(
+                        newDate, entity.getSource(), entity.getSourceRefId())) {
+            throw new BusinessException(ErrorCode.INVALID_PARAMETER);
+        }
+    }
+
+    /**
      * 소유자 또는 EDITOR 이상 권한으로 수락한 공유 참여자만 수정 가능 (SHARE-2).
      * 삭제는 소유권 이전 개념이 없어 owner 전용으로 남겨둔다 — 참여자는 나가기(leave)만 가능.
      */
@@ -132,7 +149,10 @@ public class TodoService {
             requireOwnedLabel(memberId, request.labelId());
         }
         TodoEntity entity = findEditableTodo(memberId, id);
-        entity.update(request.title(), request.time(),
+        if (request.date() != null) {
+            requireMovableTo(entity, request.date());
+        }
+        entity.update(request.date(), request.title(), request.time(),
                 request.placeName(), request.placeUrl(), request.lat(), request.lng(),
                 request.labelId(), request.pinned(), request.sortOrder());
         if (request.completed() != null) {

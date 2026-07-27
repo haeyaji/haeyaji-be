@@ -24,14 +24,24 @@ public class MeetingFinder {
                 .orElseThrow(() -> new BusinessException(MeetingErrorCode.MEETING_NOT_FOUND));
     }
 
-    /** 수집 중(COLLECTING)인 약속만 반환. 확정이면 409, 마감이 지났으면 410. */
+    /** 수집 중(COLLECTING)인 약속만 반환. 확정이면 409, 마감이 지났으면 410. 응답 제출·초대·합류용. */
     public MeetingEntity getCollecting(String shareToken, LocalDateTime now) {
+        MeetingEntity entity = getUnconfirmed(shareToken);
+        if (entity.toDomain().statusAt(now) == MeetingStatus.EXPIRED) {
+            throw new BusinessException(MeetingErrorCode.MEETING_EXPIRED);
+        }
+        return entity;
+    }
+
+    /**
+     * 아직 확정되지 않은 약속을 반환(마감이 지났어도 허용). <b>방장 확정</b> 전용.
+     * <p>마감은 "응답 수집 종료"이지 "약속 폐기"가 아니다 — 마감 후 집계 결과를 보고 시간을 확정하는 게
+     * 정상 흐름이라, 여기서 만료를 막으면 마감된 약속을 영영 확정할 수 없게 된다.
+     */
+    public MeetingEntity getUnconfirmed(String shareToken) {
         MeetingEntity entity = getByShareToken(shareToken);
         if (entity.getStatus() == MeetingStatus.CONFIRMED) {
             throw new BusinessException(MeetingErrorCode.MEETING_ALREADY_CONFIRMED);
-        }
-        if (entity.toDomain().statusAt(now) == MeetingStatus.EXPIRED) {
-            throw new BusinessException(MeetingErrorCode.MEETING_EXPIRED);
         }
         return entity;
     }

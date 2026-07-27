@@ -28,6 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -50,14 +51,20 @@ public class MeetingService {
     private final ApplicationEventPublisher eventPublisher;
     private final Clock clock;
 
+    /** 응답 마감 기본값 — 지정하지 않으면 생성 시각으로부터 2시간. 이때까지 모인 응답으로 집계가 공개된다. */
+    private static final Duration DEFAULT_RESPONSE_WINDOW = Duration.ofHours(2);
+
     @Transactional
     public MeetingDetail create(UUID creatorId, MeetingCreateRequest request) {
         CandidateDates candidateDates = CandidateDates.of(request.dates(), LocalDate.now(clock));
         TimeGrid grid = TimeGrid.of(request.timeStart(), request.timeEnd(), request.slotUnitMinutes());
 
+        LocalDateTime deadline = request.deadline() != null
+                ? request.deadline()
+                : LocalDateTime.now(clock).plus(DEFAULT_RESPONSE_WINDOW);
         MeetingEntity meeting = meetingRepository.save(MeetingEntity.create(
                 creatorId, request.title(), request.type(),
-                grid, request.deadline(), ShareTokenGenerator.generate()));
+                grid, deadline, ShareTokenGenerator.generate()));
         UUID meetingId = meeting.getId();
 
         meetingDateRepository.saveAll(candidateDates.dates().stream()
@@ -92,7 +99,7 @@ public class MeetingService {
 
     @Transactional
     public MeetingDetail confirm(String shareToken, UUID memberId, MeetingConfirmRequest request) {
-        MeetingEntity entity = meetingFinder.getCollecting(shareToken, LocalDateTime.now(clock));
+        MeetingEntity entity = meetingFinder.getUnconfirmed(shareToken);
         Meeting meeting = entity.toDomain();
         if (!meeting.isCreator(memberId)) {
             throw new BusinessException(MeetingErrorCode.NOT_MEETING_CREATOR);

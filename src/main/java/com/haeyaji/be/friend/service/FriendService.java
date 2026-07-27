@@ -6,6 +6,7 @@ import com.haeyaji.be.friend.domain.Friend;
 import com.haeyaji.be.friend.domain.FriendRequestedEvent;
 import com.haeyaji.be.friend.domain.FriendRespondedEvent;
 import com.haeyaji.be.friend.domain.FriendStatus;
+import com.haeyaji.be.friend.domain.FriendWithCounterpart;
 import com.haeyaji.be.friend.repository.FriendRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -122,22 +123,19 @@ public class FriendService {
         return friend;
     }
 
-    // 내 친구 목록
-    public List<Friend> getFriends(UUID memberId) {
-        return friendRepository.findFriends(memberId);
+    /** 내 친구 목록. 화면에 이름이 필요하므로 상대 닉네임까지 한 쿼리로 붙여 온다. */
+    public List<FriendWithCounterpart> getFriends(UUID memberId) {
+        return friendRepository.findFriendsWithCounterpart(memberId);
     }
 
     // 내가 받은 친구 요청 목록
-    public List<Friend> getReceivedRequests(UUID memberId) {
-        return friendRepository.findByReceiverIdAndStatus(memberId, FriendStatus.PENDING);
+    public List<FriendWithCounterpart> getReceivedRequests(UUID memberId) {
+        return friendRepository.findRequestsWithCounterpart(memberId, FriendStatus.PENDING, false);
     }
 
-    /**
-     * 내가 보낸 친구 요청 목록 (status=PENDING).
-     * TODO friendRepository.findByRequesterIdAndStatus(memberId, PENDING)
-     */
-    public List<Friend> getSentRequests(UUID memberId) {
-        return friendRepository.findByRequesterIdAndStatus(memberId, FriendStatus.PENDING);
+    /** 내가 보낸 친구 요청 목록 (status=PENDING). */
+    public List<FriendWithCounterpart> getSentRequests(UUID memberId) {
+        return friendRepository.findRequestsWithCounterpart(memberId, FriendStatus.PENDING, true);
     }
     
     @Transactional

@@ -11,4 +11,7 @@ public interface MeetingResponseRepository extends JpaRepository<MeetingResponse
     List<MeetingResponseEntity> findByMeetingTimeSlotIdIn(Collection<UUID> slotIds);
 
     List<MeetingResponseEntity> findByMemberIdAndMeetingTimeSlotIdIn(UUID memberId, Collection<UUID> slotIds);
+
+    /** 약속 삭제 시 정리 — 응답은 슬롯을 참조하므로 슬롯보다 먼저 지운다. */
+    void deleteByMeetingTimeSlotIdIn(Collection<UUID> slotIds);
 }

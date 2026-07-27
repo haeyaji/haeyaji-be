@@ -26,6 +26,9 @@ public interface TodoRepository extends JpaRepository<TodoEntity, UUID> {
 
     boolean existsByTodoDateAndSourceAndSourceRefId(LocalDate todoDate, TodoSource source, UUID sourceRefId);
 
+    /** 원본(약속·루틴)이 사라졌을 때 거기서 파생된 할 일을 회수하기 위한 조회. */
+    List<TodoEntity> findBySourceAndSourceRefId(TodoSource source, UUID sourceRefId);
+
     boolean existsByLabelId(UUID labelId);
 
     /** 개인화 distill: 최근 AI 추천으로 담은 할 일(제목/장소를 recentSelections 근거로 사용). */

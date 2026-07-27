@@ -24,4 +24,12 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("update Notification n set n.read = true, n.readAt = :now where n.memberId = :memberId and n.read = false")
     int markAllAsRead(@Param("memberId") UUID memberId, @Param("now") LocalDateTime now);
+
+    /**
+     * 가리키던 대상이 사라진 알림 정리 — 눌러도 404가 나는 알림을 남기지 않는다.
+     * 대상 하나에 여러 수신자의 알림이 달리므로 건별 삭제 대신 한 번에 지운다.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("delete from Notification n where n.refId = :refId")
+    long deleteByRefId(@Param("refId") UUID refId);
 }

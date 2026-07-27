@@ -28,6 +28,9 @@ public interface MeetingParticipantRepository extends JpaRepository<MeetingParti
 
     long countByMeetingIdAndInviteStatus(UUID meetingId, InviteStatus inviteStatus);
 
+    /** 약속 삭제 시 정리. */
+    void deleteByMeetingId(UUID meetingId);
+
     /** 내가 받은 초대함(PENDING) — 알림이 유실돼도 여기서 다시 찾을 수 있다. */
     List<MeetingParticipantEntity> findByMemberIdAndInviteStatus(UUID memberId, InviteStatus inviteStatus);
 

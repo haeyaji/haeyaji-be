@@ -137,9 +137,9 @@ class NotificationServiceTest {
     @Test
     void 다음_페이지가_있으면_요청한_개수만_돌려주고_초과분은_커서로_쓰지_않는다() {
         // size+1을 조회해 "더 있는지"를 판단한다 — 덤으로 읽은 한 건이 응답에 새면 페이지가 어긋난다.
-        when(repository.getNotifications(eq(me), any(), any(), eq(3))).thenReturn(rows(3));
+        when(repository.getNotifications(eq(me), any(), any(), any(), eq(3))).thenReturn(rows(3));
 
-        var page = service.getNotifications(me, null, null, 2);
+        var page = service.getNotifications(me, null, null, null, 2);
 
         assertThat(page.content()).hasSize(2);
         assertThat(page.hasNext()).isTrue();
@@ -148,9 +148,9 @@ class NotificationServiceTest {
 
     @Test
     void 마지막_페이지면_다음이_없다고_알린다() {
-        when(repository.getNotifications(eq(me), any(), any(), eq(3))).thenReturn(rows(2));
+        when(repository.getNotifications(eq(me), any(), any(), any(), eq(3))).thenReturn(rows(2));
 
-        var page = service.getNotifications(me, null, null, 2);
+        var page = service.getNotifications(me, null, null, null, 2);
 
         assertThat(page.content()).hasSize(2);
         assertThat(page.hasNext()).isFalse();
@@ -159,9 +159,9 @@ class NotificationServiceTest {
     @Test
     void 알림이_없으면_커서도_없다() {
         // 빈 목록에서 마지막 원소를 집으려 하면 터진다.
-        when(repository.getNotifications(eq(me), any(), any(), anyInt())).thenReturn(new ArrayList<>());
+        when(repository.getNotifications(eq(me), any(), any(), any(), anyInt())).thenReturn(new ArrayList<>());
 
-        var page = service.getNotifications(me, null, null, 20);
+        var page = service.getNotifications(me, null, null, null, 20);
 
         assertThat(page.content()).isEmpty();
         assertThat(page.hasNext()).isFalse();
@@ -175,5 +175,16 @@ class NotificationServiceTest {
 
         verify(repository).markAllAsRead(eq(me), any());
         verify(repository, never()).findByMemberIdAndReadFalse(any());
+    }
+
+    @Test
+    void 카테고리와_타입은_각각_따로_넘어간다() {
+        // 알림함 탭은 카테고리(초대·할 일·친구) 단위, 그 안의 세부 필터가 타입이다.
+        when(repository.getNotifications(any(), any(), any(), any(), anyInt())).thenReturn(new ArrayList<>());
+
+        service.getNotifications(me, NotificationCategory.INVITE, NotificationType.MEETING_INVITE, null, 20);
+
+        verify(repository).getNotifications(eq(me), eq(NotificationCategory.INVITE),
+                eq(NotificationType.MEETING_INVITE), eq(null), eq(21));
     }
 }

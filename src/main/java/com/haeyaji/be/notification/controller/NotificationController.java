@@ -5,6 +5,7 @@ import com.haeyaji.be.common.response.CursorPageResponse;
 import com.haeyaji.be.common.response.SuccessCode;
 import com.haeyaji.be.member.oauth.CustomUserDetails;
 import com.haeyaji.be.notification.domain.Notification;
+import com.haeyaji.be.notification.domain.NotificationCategory;
 import com.haeyaji.be.notification.domain.NotificationType;
 import com.haeyaji.be.notification.dto.NotificationResponse;
 import com.haeyaji.be.notification.service.NotificationService;
@@ -44,11 +45,12 @@ public class NotificationController {
 
     @GetMapping
     public ApiResponse<CursorPageResponse<NotificationResponse, UUID>> getNotifications(@AuthenticationPrincipal CustomUserDetails userDetails,
+                                                                                          @RequestParam(required = false) NotificationCategory category,
                                                                                           @RequestParam(required = false) NotificationType type,
                                                                                           @RequestParam(required = false) UUID cursor,
                                                                                           @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
 
-        CursorPageResponse<Notification, UUID> pageResponse = notificationService.getNotifications(userDetails.getMemberId(), type, cursor, size);
+        CursorPageResponse<Notification, UUID> pageResponse = notificationService.getNotifications(userDetails.getMemberId(), category, type, cursor, size);
 
         return ApiResponse.of(pageResponse.map(NotificationResponse::from), SuccessCode.GET_SUCCESS);
     }

@@ -13,6 +13,10 @@ public interface TodoRepository extends JpaRepository<TodoEntity, UUID> {
     // sortOrder까지 같으면(예: 둘 다 기본값 0) 순서가 비결정적이라(N6), createdAt을 2차 정렬키로 둔다.
     List<TodoEntity> findByMemberIdAndTodoDateOrderByPinnedDescSortOrderAscCreatedAtAsc(UUID memberId, LocalDate todoDate);
 
+    /** 라벨 필터(내 소유 한정). 정렬 규칙은 날짜별 조회와 동일하게 맞춘다. */
+    List<TodoEntity> findByMemberIdAndTodoDateAndLabelIdOrderByPinnedDescSortOrderAscCreatedAtAsc(
+            UUID memberId, LocalDate todoDate, UUID labelId);
+
     /** 공유받은 할 일을 캘린더(날짜별)에 합치기 위한 조회 — 참여자 todoId 집합 중 해당 날짜 것. */
     List<TodoEntity> findByIdInAndTodoDate(java.util.Collection<UUID> ids, LocalDate todoDate);
 

@@ -31,7 +31,7 @@ import java.util.UUID;
  * 할 일 (FR-1).
  *
  * <pre>
- * GET    /api/todos?date={yyyy-MM-dd}   목록 + 완료/전체 집계
+ * GET    /api/todos?date={yyyy-MM-dd}[&labelId={uuid}]   목록 + 완료/전체 집계 (labelId는 내 소유 할 일만 필터)
  * POST   /api/todos
  * PATCH  /api/todos/{id}                제목·시간·장소·분류·완료 여부
  * DELETE /api/todos/{id}
@@ -48,9 +48,10 @@ public class TodoController {
     public ApiResponse<TodoListResponse> getTodos(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false) UUID labelId
     ) {
-        var tasks = todoService.getTodosByDate(userDetails.getMemberId(), date).stream()
+        var tasks = todoService.getTodosByDate(userDetails.getMemberId(), date, labelId).stream()
                 .map(v -> TodoResponse.from(v.todo(), v.sharedRole()))
                 .toList();
         return ApiResponse.of(TodoListResponse.from(tasks), SuccessCode.GET_SUCCESS);

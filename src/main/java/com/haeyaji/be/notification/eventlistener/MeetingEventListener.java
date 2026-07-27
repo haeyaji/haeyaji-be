@@ -27,7 +27,7 @@ public class MeetingEventListener {
                 notificationService.send(
                         event.inviterMemberId(), inviteeId,
                         NotificationCategory.INVITE, NotificationType.MEETING_INVITE,
-                        event.meetingTitle(), "eventbody", event.meetingId(),
+                        event.meetingTitle(), "가능한 시간을 선택해 주세요.", event.meetingId(),
                         event.shareToken()
                 );
             } catch (Exception e) { // 500에러 터질 시 알림 발송 전체적으로 이루어지지 않을 수 있음
@@ -45,7 +45,7 @@ public class MeetingEventListener {
                         event.creatorId(), // 확정한 사람(방장) — 본인에게는 발송되지 않는다(NOTI-16)
                         participantId,
                         NotificationCategory.INVITE, NotificationType.MEETING_CONFIRMED,
-                        event.meetingTitle(), "eventbody", event.meetingId(),
+                        event.meetingTitle(), "약속 시간이 확정됐어요.", event.meetingId(),
                         event.shareToken()
                 );
             } catch (Exception e) { // 500에러 터질 시 알림 발송 전체적으로 이루어지지 않을 수 있음

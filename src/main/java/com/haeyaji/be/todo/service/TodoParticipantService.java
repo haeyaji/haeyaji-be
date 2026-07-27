@@ -7,6 +7,7 @@ import com.haeyaji.be.todo.domain.InviteStatus;
 import com.haeyaji.be.todo.domain.ParticipantRole;
 import com.haeyaji.be.todo.domain.Todo;
 import com.haeyaji.be.todo.domain.TodoParticipant;
+import com.haeyaji.be.todo.domain.TodoRespondedEvent;
 import com.haeyaji.be.todo.domain.TodoSharedEvent;
 import com.haeyaji.be.todo.dto.TodoShareRequest;
 import com.haeyaji.be.todo.repository.TodoEntity;
@@ -80,6 +81,13 @@ public class TodoParticipantService {
         } else {
             participant.reject();
         }
+
+        // 알림(noti) 연계 지점 — 수락/거절 결과를 owner에게 알림
+        TodoEntity todo = todoRepository.findById(todoId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        eventPublisher.publishEvent(new TodoRespondedEvent(
+                todoId, todo.getTitle(), memberId, todo.getMemberId(), accept));
+
         return participant.toDomain();
     }
 

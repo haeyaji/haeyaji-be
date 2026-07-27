@@ -3,6 +3,7 @@ package com.haeyaji.be.notification.eventlistener;
 import com.haeyaji.be.notification.domain.NotificationCategory;
 import com.haeyaji.be.notification.domain.NotificationType;
 import com.haeyaji.be.notification.service.NotificationService;
+import com.haeyaji.be.todo.domain.TodoRespondedEvent;
 import com.haeyaji.be.todo.domain.TodoSharedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +32,19 @@ public class TodoEventListener {
             } catch (Exception e) { // 한 명 발송 실패가 나머지 발송을 막지 않도록 개별 처리
                 log.error("SHARE_INVITE 알림 발송 실패: todoId={}, inviteeId={}", event.todoId(), inviteeId, e);
             }
+        }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onResponded(TodoRespondedEvent event) {
+        try {
+            notificationService.send(
+                    event.responderId(), event.ownerId(),
+                    NotificationCategory.TODO, NotificationType.SHARE_INVITE_RESPONSE,
+                    event.todoTitle(), "eventbody", event.todoId()
+            );
+        } catch (Exception e) {
+            log.error("SHARE_INVITE_RESPONSE 알림 발송 실패: todoId={}, ownerId={}", event.todoId(), event.ownerId(), e);
         }
     }
 }

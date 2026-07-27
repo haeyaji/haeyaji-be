@@ -26,8 +26,7 @@ public class TodoEventListener {
                 notificationService.send(
                         event.ownerId(), inviteeId,
                         NotificationCategory.TODO, NotificationType.SHARE_INVITE,
-                        event.todoTitle(), "eventbody", event.todoId(),
-                        null // linkToken — todo는 공개 공유링크 없음
+                        event.todoTitle(), "eventbody", event.todoId()
                 );
             } catch (Exception e) { // 한 명 발송 실패가 나머지 발송을 막지 않도록 개별 처리
                 log.error("SHARE_INVITE 알림 발송 실패: todoId={}, inviteeId={}", event.todoId(), inviteeId, e);

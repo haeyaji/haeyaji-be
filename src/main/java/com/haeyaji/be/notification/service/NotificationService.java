@@ -92,6 +92,13 @@ public class NotificationService {
      *      actor가 있는 알림은 send, 없으면 sendSystem (actorId = null)
      */
 
+    // linkToken 없는 알림용 오버로드 — MEETING_INVITE/MEETING_CONFIRMED처럼 shareToken 있는 경우만 8-파라미터 버전 사용
+    @Transactional
+    public Notification send(UUID actorId, UUID memberId, NotificationCategory category, NotificationType type,
+                             String title, String body, UUID refId) {
+        return send(actorId, memberId, category, type, title, body, refId, null);
+    }
+
     @Transactional
     public Notification send(UUID actorId, UUID memberId, NotificationCategory category, NotificationType type,
 
@@ -101,6 +108,13 @@ public class NotificationService {
         }
 
         return doSend(memberId, category, type, title, body, refId, linkToken);
+    }
+
+    // linkToken 없는 알림용 7-parameter 메서드
+    @Transactional
+    public Notification sendSystem(UUID memberId, NotificationCategory category, NotificationType type,
+                                   String title, String body, UUID refId) {
+        return sendSystem(memberId, category, type, title, body, refId, null);
     }
 
     @Transactional

@@ -4,6 +4,7 @@ import com.haeyaji.be.common.exception.BusinessException;
 import com.haeyaji.be.common.exception.ErrorCode;
 import com.haeyaji.be.meeting.domain.InviteStatus;
 import com.haeyaji.be.meeting.domain.MeetingErrorCode;
+import com.haeyaji.be.meeting.domain.MeetingInviteRespondedEvent;
 import com.haeyaji.be.meeting.domain.MeetingInviteResult;
 import com.haeyaji.be.meeting.domain.MeetingInvitedEvent;
 import com.haeyaji.be.meeting.domain.MeetingParticipant;
@@ -47,8 +48,19 @@ public class MeetingParticipationService {
                 .findByMeetingIdAndMemberId(meeting.getId(), memberId)
                 .orElseGet(() -> meetingParticipantRepository.save(
                         MeetingParticipantEntity.create(meeting.getId(), memberId)));
+        // 초대장에 응한 것인지, 링크로 그냥 들어온 것인지는 수락 전 상태로만 구분된다.
+        boolean respondedToInvite = participant.getInviteStatus() == InviteStatus.PENDING;
         participant.accept();
+        if (respondedToInvite) {
+            publishInviteResponse(meeting, memberId, true);
+        }
         return participant.toDomain();
+    }
+
+    private void publishInviteResponse(MeetingEntity meeting, UUID responderId, boolean accepted) {
+        eventPublisher.publishEvent(new MeetingInviteRespondedEvent(
+                meeting.getId(), meeting.getShareToken(), meeting.getTitle(),
+                meeting.getCreatorId(), responderId, accepted));
     }
 
     /**
@@ -119,5 +131,6 @@ public class MeetingParticipationService {
             throw new BusinessException(MeetingErrorCode.ALREADY_RESPONDED_INVITATION);
         }
         participant.reject();
+        publishInviteResponse(meeting, memberId, false);
     }
 }

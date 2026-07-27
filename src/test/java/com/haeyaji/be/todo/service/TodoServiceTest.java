@@ -15,6 +15,7 @@ import com.haeyaji.be.todo.repository.TodoParticipantEntity;
 import com.haeyaji.be.todo.repository.TodoParticipantRepository;
 import com.haeyaji.be.todo.repository.TodoRepository;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.Clock;
 import java.time.LocalDate;
@@ -58,7 +59,7 @@ class TodoServiceTest {
     @Test
     void 과거_날짜로_추가하면_예외() {
         TodoRepository repo = mock(TodoRepository.class);
-        TodoService service = new TodoService(repo, mock(TodoParticipantRepository.class), mock(LabelRepository.class), fixedClock);
+        TodoService service = new TodoService(repo, mock(TodoParticipantRepository.class), mock(LabelRepository.class), mock(ApplicationEventPublisher.class), fixedClock);
 
         assertThatThrownBy(() -> service.createTodo(MEMBER_ID, request(TODAY.minusDays(1), null, null, null)))
                 .isInstanceOf(BusinessException.class)
@@ -70,7 +71,7 @@ class TodoServiceTest {
     void 추가시_출처_고정여부_정렬순서_미지정이면_기본값() {
         TodoRepository repo = mock(TodoRepository.class);
         when(repo.save(any(TodoEntity.class))).thenAnswer(inv -> inv.getArgument(0));
-        TodoService service = new TodoService(repo, mock(TodoParticipantRepository.class), mock(LabelRepository.class), fixedClock);
+        TodoService service = new TodoService(repo, mock(TodoParticipantRepository.class), mock(LabelRepository.class), mock(ApplicationEventPublisher.class), fixedClock);
 
         Todo todo = service.createTodo(MEMBER_ID, request(TODAY, null, null, null));
 
@@ -84,7 +85,7 @@ class TodoServiceTest {
     void 추가시_값을_주면_그대로_반영() {
         TodoRepository repo = mock(TodoRepository.class);
         when(repo.save(any(TodoEntity.class))).thenAnswer(inv -> inv.getArgument(0));
-        TodoService service = new TodoService(repo, mock(TodoParticipantRepository.class), mock(LabelRepository.class), fixedClock);
+        TodoService service = new TodoService(repo, mock(TodoParticipantRepository.class), mock(LabelRepository.class), mock(ApplicationEventPublisher.class), fixedClock);
 
         Todo todo = service.createTodo(MEMBER_ID, request(TODAY, TodoSource.AI, true, 5));
 
@@ -96,7 +97,7 @@ class TodoServiceTest {
     void 추가시_source를_지정해도_MANUAL로_고정된다() {
         TodoRepository repo = mock(TodoRepository.class);
         when(repo.save(any(TodoEntity.class))).thenAnswer(inv -> inv.getArgument(0));
-        TodoService service = new TodoService(repo, mock(TodoParticipantRepository.class), mock(LabelRepository.class), fixedClock);
+        TodoService service = new TodoService(repo, mock(TodoParticipantRepository.class), mock(LabelRepository.class), mock(ApplicationEventPublisher.class), fixedClock);
 
         Todo todo = service.createTodo(MEMBER_ID, request(TODAY, TodoSource.ROUTINE, null, null));
 
@@ -110,7 +111,7 @@ class TodoServiceTest {
         when(repo.save(any(TodoEntity.class))).thenAnswer(inv -> inv.getArgument(0));
         UUID labelId = UUID.randomUUID();
         when(labelRepo.findByIdAndMemberId(labelId, MEMBER_ID)).thenReturn(Optional.of(LabelEntity.create(MEMBER_ID, "라벨", null)));
-        TodoService service = new TodoService(repo, mock(TodoParticipantRepository.class), labelRepo, fixedClock);
+        TodoService service = new TodoService(repo, mock(TodoParticipantRepository.class), labelRepo, mock(ApplicationEventPublisher.class), fixedClock);
 
         Todo todo = service.createTodo(MEMBER_ID, new TodoRequest("제목", TODAY, null, null, null, null, null,
                 labelId, null, null, null));
@@ -124,7 +125,7 @@ class TodoServiceTest {
         LabelRepository labelRepo = mock(LabelRepository.class);
         UUID labelId = UUID.randomUUID();
         when(labelRepo.findByIdAndMemberId(labelId, MEMBER_ID)).thenReturn(Optional.empty());
-        TodoService service = new TodoService(repo, mock(TodoParticipantRepository.class), labelRepo, fixedClock);
+        TodoService service = new TodoService(repo, mock(TodoParticipantRepository.class), labelRepo, mock(ApplicationEventPublisher.class), fixedClock);
 
         assertThatThrownBy(() -> service.createTodo(MEMBER_ID, new TodoRequest("제목", TODAY, null, null, null, null, null,
                 labelId, null, null, null)))
@@ -142,7 +143,7 @@ class TodoServiceTest {
         when(repo.findByIdAndMemberId(id, MEMBER_ID)).thenReturn(Optional.of(existing));
         UUID labelId = UUID.randomUUID();
         when(labelRepo.findByIdAndMemberId(labelId, MEMBER_ID)).thenReturn(Optional.of(LabelEntity.create(MEMBER_ID, "라벨", null)));
-        TodoService service = new TodoService(repo, mock(TodoParticipantRepository.class), labelRepo, fixedClock);
+        TodoService service = new TodoService(repo, mock(TodoParticipantRepository.class), labelRepo, mock(ApplicationEventPublisher.class), fixedClock);
 
         Todo todo = service.updateTodo(MEMBER_ID, id,
                 new TodoUpdateRequest(null, null, null, null, null, null, null, labelId, null, null, null));
@@ -157,7 +158,7 @@ class TodoServiceTest {
         UUID id = UUID.randomUUID();
         UUID labelId = UUID.randomUUID();
         when(labelRepo.findByIdAndMemberId(labelId, MEMBER_ID)).thenReturn(Optional.empty());
-        TodoService service = new TodoService(repo, mock(TodoParticipantRepository.class), labelRepo, fixedClock);
+        TodoService service = new TodoService(repo, mock(TodoParticipantRepository.class), labelRepo, mock(ApplicationEventPublisher.class), fixedClock);
 
         assertThatThrownBy(() -> service.updateTodo(MEMBER_ID, id,
                 new TodoUpdateRequest(null, null, null, null, null, null, null, labelId, null, null, null)))
@@ -171,7 +172,7 @@ class TodoServiceTest {
         TodoRepository repo = mock(TodoRepository.class);
         TodoEntity saved = entity("제목", null, null, null, null, null, true, 1);
         when(repo.findByMemberIdAndTodoDateOrderByPinnedDescSortOrderAscCreatedAtAsc(MEMBER_ID, TODAY)).thenReturn(List.of(saved));
-        TodoService service = new TodoService(repo, mock(TodoParticipantRepository.class), mock(LabelRepository.class), fixedClock);
+        TodoService service = new TodoService(repo, mock(TodoParticipantRepository.class), mock(LabelRepository.class), mock(ApplicationEventPublisher.class), fixedClock);
 
         List<TodoView> todos = service.getTodosByDate(MEMBER_ID, TODAY, null);
 
@@ -184,7 +185,7 @@ class TodoServiceTest {
         TodoRepository repo = mock(TodoRepository.class);
         UUID id = UUID.randomUUID();
         when(repo.findByIdAndMemberId(id, MEMBER_ID)).thenReturn(Optional.empty());
-        TodoService service = new TodoService(repo, mock(TodoParticipantRepository.class), mock(LabelRepository.class), fixedClock);
+        TodoService service = new TodoService(repo, mock(TodoParticipantRepository.class), mock(LabelRepository.class), mock(ApplicationEventPublisher.class), fixedClock);
 
         assertThatThrownBy(() -> service.updateTodo(MEMBER_ID, id, updateRequest(null, true, null, null)))
                 .isInstanceOf(BusinessException.class)
@@ -198,7 +199,7 @@ class TodoServiceTest {
         UUID id = UUID.randomUUID();
         UUID otherMemberId = UUID.randomUUID();
         when(repo.findByIdAndMemberId(id, otherMemberId)).thenReturn(Optional.empty());
-        TodoService service = new TodoService(repo, mock(TodoParticipantRepository.class), mock(LabelRepository.class), fixedClock);
+        TodoService service = new TodoService(repo, mock(TodoParticipantRepository.class), mock(LabelRepository.class), mock(ApplicationEventPublisher.class), fixedClock);
 
         assertThatThrownBy(() -> service.updateTodo(otherMemberId, id, updateRequest(null, true, null, null)))
                 .isInstanceOf(BusinessException.class)
@@ -209,7 +210,7 @@ class TodoServiceTest {
     @Test
     void 수정시_제목이_공백이면_예외() {
         TodoRepository repo = mock(TodoRepository.class);
-        TodoService service = new TodoService(repo, mock(TodoParticipantRepository.class), mock(LabelRepository.class), fixedClock);
+        TodoService service = new TodoService(repo, mock(TodoParticipantRepository.class), mock(LabelRepository.class), mock(ApplicationEventPublisher.class), fixedClock);
 
         assertThatThrownBy(() -> service.updateTodo(MEMBER_ID, UUID.randomUUID(), updateRequest("   ", null, null, null)))
                 .isInstanceOf(BusinessException.class)
@@ -229,7 +230,7 @@ class TodoServiceTest {
         when(repo.findByIdAndMemberId(id, editorId)).thenReturn(Optional.empty());
         when(participantRepo.findByTodoIdAndMemberId(id, editorId)).thenReturn(Optional.of(participant));
         when(repo.findById(id)).thenReturn(Optional.of(existing));
-        TodoService service = new TodoService(repo, participantRepo, mock(LabelRepository.class), fixedClock);
+        TodoService service = new TodoService(repo, participantRepo, mock(LabelRepository.class), mock(ApplicationEventPublisher.class), fixedClock);
 
         Todo todo = service.updateTodo(editorId, id, updateRequest("새제목", null, null, null));
 
@@ -246,7 +247,7 @@ class TodoServiceTest {
         participant.accept();
         when(repo.findByIdAndMemberId(id, viewerId)).thenReturn(Optional.empty());
         when(participantRepo.findByTodoIdAndMemberId(id, viewerId)).thenReturn(Optional.of(participant));
-        TodoService service = new TodoService(repo, participantRepo, mock(LabelRepository.class), fixedClock);
+        TodoService service = new TodoService(repo, participantRepo, mock(LabelRepository.class), mock(ApplicationEventPublisher.class), fixedClock);
 
         assertThatThrownBy(() -> service.updateTodo(viewerId, id, updateRequest("새제목", null, null, null)))
                 .isInstanceOf(BusinessException.class)
@@ -263,7 +264,7 @@ class TodoServiceTest {
         TodoParticipantEntity participant = TodoParticipantEntity.invite(id, pendingMemberId, ParticipantRole.EDITOR);
         when(repo.findByIdAndMemberId(id, pendingMemberId)).thenReturn(Optional.empty());
         when(participantRepo.findByTodoIdAndMemberId(id, pendingMemberId)).thenReturn(Optional.of(participant));
-        TodoService service = new TodoService(repo, participantRepo, mock(LabelRepository.class), fixedClock);
+        TodoService service = new TodoService(repo, participantRepo, mock(LabelRepository.class), mock(ApplicationEventPublisher.class), fixedClock);
 
         assertThatThrownBy(() -> service.updateTodo(pendingMemberId, id, updateRequest("새제목", null, null, null)))
                 .isInstanceOf(BusinessException.class)
@@ -278,7 +279,7 @@ class TodoServiceTest {
         TodoEntity existing = entity("기존제목", LocalTime.of(9, 0), "기존장소", "http://place",
                 37.5, 127.0, false, 3);
         when(repo.findByIdAndMemberId(id, MEMBER_ID)).thenReturn(Optional.of(existing));
-        TodoService service = new TodoService(repo, mock(TodoParticipantRepository.class), mock(LabelRepository.class), fixedClock);
+        TodoService service = new TodoService(repo, mock(TodoParticipantRepository.class), mock(LabelRepository.class), mock(ApplicationEventPublisher.class), fixedClock);
 
         Todo todo = service.updateTodo(MEMBER_ID, id, updateRequest(null, true, null, null));
 
@@ -298,7 +299,7 @@ class TodoServiceTest {
         UUID id = UUID.randomUUID();
         TodoEntity existing = entity("제목", null, null, null, null, null, false, 0);
         when(repo.findByIdAndMemberId(id, MEMBER_ID)).thenReturn(Optional.of(existing));
-        TodoService service = new TodoService(repo, mock(TodoParticipantRepository.class), mock(LabelRepository.class), fixedClock);
+        TodoService service = new TodoService(repo, mock(TodoParticipantRepository.class), mock(LabelRepository.class), mock(ApplicationEventPublisher.class), fixedClock);
 
         Todo todo = service.updateTodo(MEMBER_ID, id, updateRequest(null, null, null, true));
 
@@ -313,7 +314,7 @@ class TodoServiceTest {
         TodoEntity existing = entity("제목", null, null, null, null, null, false, 0);
         existing.setCompleted(true, LocalDateTime.now(fixedClock));
         when(repo.findByIdAndMemberId(id, MEMBER_ID)).thenReturn(Optional.of(existing));
-        TodoService service = new TodoService(repo, mock(TodoParticipantRepository.class), mock(LabelRepository.class), fixedClock);
+        TodoService service = new TodoService(repo, mock(TodoParticipantRepository.class), mock(LabelRepository.class), mock(ApplicationEventPublisher.class), fixedClock);
 
         Todo todo = service.updateTodo(MEMBER_ID, id, updateRequest(null, null, null, false));
 
@@ -326,7 +327,7 @@ class TodoServiceTest {
         TodoRepository repo = mock(TodoRepository.class);
         UUID id = UUID.randomUUID();
         when(repo.findByIdAndMemberId(id, MEMBER_ID)).thenReturn(Optional.empty());
-        TodoService service = new TodoService(repo, mock(TodoParticipantRepository.class), mock(LabelRepository.class), fixedClock);
+        TodoService service = new TodoService(repo, mock(TodoParticipantRepository.class), mock(LabelRepository.class), mock(ApplicationEventPublisher.class), fixedClock);
 
         assertThatThrownBy(() -> service.deleteTodo(MEMBER_ID, id))
                 .isInstanceOf(BusinessException.class)
@@ -340,7 +341,7 @@ class TodoServiceTest {
         UUID id = UUID.randomUUID();
         TodoEntity existing = entity("제목", null, null, null, null, null, false, 0);
         when(repo.findByIdAndMemberId(id, MEMBER_ID)).thenReturn(Optional.of(existing));
-        TodoService service = new TodoService(repo, mock(TodoParticipantRepository.class), mock(LabelRepository.class), fixedClock);
+        TodoService service = new TodoService(repo, mock(TodoParticipantRepository.class), mock(LabelRepository.class), mock(ApplicationEventPublisher.class), fixedClock);
 
         service.deleteTodo(MEMBER_ID, id);
 

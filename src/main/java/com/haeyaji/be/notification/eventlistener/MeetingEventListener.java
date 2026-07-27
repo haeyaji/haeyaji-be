@@ -1,6 +1,7 @@
 package com.haeyaji.be.notification.eventlistener;
 
 import com.haeyaji.be.meeting.domain.MeetingConfirmedEvent;
+import com.haeyaji.be.meeting.domain.MeetingInviteRespondedEvent;
 import com.haeyaji.be.meeting.domain.MeetingInvitedEvent;
 import com.haeyaji.be.notification.domain.NotificationCategory;
 import com.haeyaji.be.notification.domain.NotificationType;
@@ -17,8 +18,9 @@ import java.util.UUID;
 @Component
 @RequiredArgsConstructor
 public class MeetingEventListener {
-    // Todo: EventBody 어떻게 채울 것인지?
+
     private final NotificationService notificationService;
+    private final ActorNameResolver actorNames;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onInvited(MeetingInvitedEvent event) {
@@ -52,6 +54,25 @@ public class MeetingEventListener {
                 log.error("MEETING_CONFIRMED 알림 발송 실패: meetingId={}, participantId={}", event.meetingId(), participantId, e);
             }
 
+        }
+    }
+
+    /** 초대에 응한 사실은 방장만 알면 된다 — 마감을 기다릴지 먼저 확정할지 판단할 근거가 된다. */
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onInviteResponded(MeetingInviteRespondedEvent event) {
+        String responder = actorNames.nicknameOf(event.responderId());
+        String body = "%s님이 '%s' 약속 초대를 %s.".formatted(
+                responder, event.meetingTitle(), event.accepted() ? "수락했어요" : "거절했어요");
+        try {
+            notificationService.send(
+                    event.responderId(), event.creatorId(),
+                    NotificationCategory.INVITE, NotificationType.MEETING_INVITE_RESPONSE,
+                    event.accepted() ? "약속 초대를 수락했어요" : "약속 초대를 거절했어요",
+                    body, event.meetingId(), event.shareToken()
+            );
+        } catch (Exception e) {
+            log.error("MEETING_INVITE_RESPONSE 알림 발송 실패: meetingId={}, creatorId={}",
+                    event.meetingId(), event.creatorId(), e);
         }
     }
 }

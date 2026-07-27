@@ -14,6 +14,7 @@ import com.haeyaji.be.todo.repository.TodoParticipantEntity;
 import com.haeyaji.be.todo.repository.TodoParticipantRepository;
 import com.haeyaji.be.todo.repository.TodoRepository;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -43,7 +44,7 @@ class TodoParticipantServiceTest {
         TodoParticipantRepository participantRepo = mock(TodoParticipantRepository.class);
         TodoRepository todoRepo = mock(TodoRepository.class);
         when(todoRepo.findByIdAndMemberId(TODO_ID, OWNER_ID)).thenReturn(Optional.empty());
-        TodoParticipantService service = new TodoParticipantService(participantRepo, todoRepo, mock(FriendRepository.class));
+        TodoParticipantService service = new TodoParticipantService(participantRepo, todoRepo, mock(FriendRepository.class), mock(ApplicationEventPublisher.class));
         UUID targetMemberId = UUID.randomUUID();
         var request = new TodoShareRequest(List.of(new TodoShareRequest.ShareMember(targetMemberId, ParticipantRole.EDITOR)));
 
@@ -58,7 +59,7 @@ class TodoParticipantServiceTest {
         TodoParticipantRepository participantRepo = mock(TodoParticipantRepository.class);
         TodoRepository todoRepo = mock(TodoRepository.class);
         when(todoRepo.findByIdAndMemberId(TODO_ID, OWNER_ID)).thenReturn(Optional.of(ownedTodo()));
-        TodoParticipantService service = new TodoParticipantService(participantRepo, todoRepo, mock(FriendRepository.class));
+        TodoParticipantService service = new TodoParticipantService(participantRepo, todoRepo, mock(FriendRepository.class), mock(ApplicationEventPublisher.class));
         UUID targetMemberId = UUID.randomUUID();
         var request = new TodoShareRequest(List.of(new TodoShareRequest.ShareMember(targetMemberId, ParticipantRole.OWNER)));
 
@@ -73,7 +74,7 @@ class TodoParticipantServiceTest {
         TodoParticipantRepository participantRepo = mock(TodoParticipantRepository.class);
         TodoRepository todoRepo = mock(TodoRepository.class);
         when(todoRepo.findByIdAndMemberId(TODO_ID, OWNER_ID)).thenReturn(Optional.of(ownedTodo()));
-        TodoParticipantService service = new TodoParticipantService(participantRepo, todoRepo, mock(FriendRepository.class));
+        TodoParticipantService service = new TodoParticipantService(participantRepo, todoRepo, mock(FriendRepository.class), mock(ApplicationEventPublisher.class));
         var request = new TodoShareRequest(List.of(new TodoShareRequest.ShareMember(OWNER_ID, ParticipantRole.EDITOR)));
 
         assertThatThrownBy(() -> service.share(OWNER_ID, TODO_ID, request))
@@ -89,7 +90,7 @@ class TodoParticipantServiceTest {
         when(todoRepo.findByIdAndMemberId(TODO_ID, OWNER_ID)).thenReturn(Optional.of(ownedTodo()));
         UUID targetMemberId = UUID.randomUUID();
         when(participantRepo.existsByTodoIdAndMemberId(TODO_ID, targetMemberId)).thenReturn(true);
-        TodoParticipantService service = new TodoParticipantService(participantRepo, todoRepo, mock(FriendRepository.class));
+        TodoParticipantService service = new TodoParticipantService(participantRepo, todoRepo, mock(FriendRepository.class), mock(ApplicationEventPublisher.class));
         var request = new TodoShareRequest(List.of(new TodoShareRequest.ShareMember(targetMemberId, ParticipantRole.EDITOR)));
 
         assertThatThrownBy(() -> service.share(OWNER_ID, TODO_ID, request))
@@ -107,7 +108,7 @@ class TodoParticipantServiceTest {
         when(todoRepo.findByIdAndMemberId(TODO_ID, OWNER_ID)).thenReturn(Optional.of(ownedTodo()));
         when(participantRepo.saveAll(any())).thenAnswer(inv -> inv.getArgument(0));
         when(friendRepo.existsAcceptedBetween(OWNER_ID, targetMemberId)).thenReturn(true);
-        TodoParticipantService service = new TodoParticipantService(participantRepo, todoRepo, friendRepo);
+        TodoParticipantService service = new TodoParticipantService(participantRepo, todoRepo, friendRepo, mock(ApplicationEventPublisher.class));
         var request = new TodoShareRequest(List.of(new TodoShareRequest.ShareMember(targetMemberId, ParticipantRole.EDITOR)));
 
         List<TodoParticipant> result = service.share(OWNER_ID, TODO_ID, request);
@@ -126,7 +127,7 @@ class TodoParticipantServiceTest {
         UUID targetMemberId = UUID.randomUUID();
         when(todoRepo.findByIdAndMemberId(TODO_ID, OWNER_ID)).thenReturn(Optional.of(ownedTodo()));
         when(friendRepo.existsAcceptedBetween(OWNER_ID, targetMemberId)).thenReturn(false);
-        TodoParticipantService service = new TodoParticipantService(participantRepo, todoRepo, friendRepo);
+        TodoParticipantService service = new TodoParticipantService(participantRepo, todoRepo, friendRepo, mock(ApplicationEventPublisher.class));
         var request = new TodoShareRequest(List.of(new TodoShareRequest.ShareMember(targetMemberId, ParticipantRole.EDITOR)));
 
         assertThatThrownBy(() -> service.share(OWNER_ID, TODO_ID, request))
@@ -145,7 +146,7 @@ class TodoParticipantServiceTest {
         UUID memberId = UUID.randomUUID();
         TodoParticipantEntity participant = pendingParticipant(memberId, ParticipantRole.EDITOR);
         when(participantRepo.findByTodoIdAndMemberId(TODO_ID, memberId)).thenReturn(Optional.of(participant));
-        TodoParticipantService service = new TodoParticipantService(participantRepo, mock(TodoRepository.class), mock(FriendRepository.class));
+        TodoParticipantService service = new TodoParticipantService(participantRepo, mock(TodoRepository.class), mock(FriendRepository.class), mock(ApplicationEventPublisher.class));
 
         TodoParticipant result = service.respond(memberId, TODO_ID, true);
 
@@ -158,7 +159,7 @@ class TodoParticipantServiceTest {
         UUID memberId = UUID.randomUUID();
         TodoParticipantEntity participant = pendingParticipant(memberId, ParticipantRole.VIEWER);
         when(participantRepo.findByTodoIdAndMemberId(TODO_ID, memberId)).thenReturn(Optional.of(participant));
-        TodoParticipantService service = new TodoParticipantService(participantRepo, mock(TodoRepository.class), mock(FriendRepository.class));
+        TodoParticipantService service = new TodoParticipantService(participantRepo, mock(TodoRepository.class), mock(FriendRepository.class), mock(ApplicationEventPublisher.class));
 
         TodoParticipant result = service.respond(memberId, TODO_ID, false);
 
@@ -172,7 +173,7 @@ class TodoParticipantServiceTest {
         TodoParticipantEntity participant = pendingParticipant(memberId, ParticipantRole.EDITOR);
         participant.accept();
         when(participantRepo.findByTodoIdAndMemberId(TODO_ID, memberId)).thenReturn(Optional.of(participant));
-        TodoParticipantService service = new TodoParticipantService(participantRepo, mock(TodoRepository.class), mock(FriendRepository.class));
+        TodoParticipantService service = new TodoParticipantService(participantRepo, mock(TodoRepository.class), mock(FriendRepository.class), mock(ApplicationEventPublisher.class));
 
         assertThatThrownBy(() -> service.respond(memberId, TODO_ID, true))
                 .isInstanceOf(BusinessException.class)
@@ -186,7 +187,7 @@ class TodoParticipantServiceTest {
         TodoRepository todoRepo = mock(TodoRepository.class);
         when(todoRepo.findById(TODO_ID)).thenReturn(Optional.of(ownedTodo()));
         when(participantRepo.findByTodoId(TODO_ID)).thenReturn(List.of());
-        TodoParticipantService service = new TodoParticipantService(participantRepo, todoRepo, mock(FriendRepository.class));
+        TodoParticipantService service = new TodoParticipantService(participantRepo, todoRepo, mock(FriendRepository.class), mock(ApplicationEventPublisher.class));
 
         List<TodoParticipant> result = service.getParticipants(OWNER_ID, TODO_ID);
 
@@ -203,7 +204,7 @@ class TodoParticipantServiceTest {
         when(todoRepo.findById(TODO_ID)).thenReturn(Optional.of(ownedTodo()));
         when(participantRepo.findByTodoIdAndMemberId(TODO_ID, memberId)).thenReturn(Optional.of(participant));
         when(participantRepo.findByTodoId(TODO_ID)).thenReturn(List.of(participant));
-        TodoParticipantService service = new TodoParticipantService(participantRepo, todoRepo, mock(FriendRepository.class));
+        TodoParticipantService service = new TodoParticipantService(participantRepo, todoRepo, mock(FriendRepository.class), mock(ApplicationEventPublisher.class));
 
         List<TodoParticipant> result = service.getParticipants(memberId, TODO_ID);
 
@@ -218,7 +219,7 @@ class TodoParticipantServiceTest {
         TodoParticipantEntity participant = pendingParticipant(memberId, ParticipantRole.VIEWER);
         when(todoRepo.findById(TODO_ID)).thenReturn(Optional.of(ownedTodo()));
         when(participantRepo.findByTodoIdAndMemberId(TODO_ID, memberId)).thenReturn(Optional.of(participant));
-        TodoParticipantService service = new TodoParticipantService(participantRepo, todoRepo, mock(FriendRepository.class));
+        TodoParticipantService service = new TodoParticipantService(participantRepo, todoRepo, mock(FriendRepository.class), mock(ApplicationEventPublisher.class));
 
         assertThatThrownBy(() -> service.getParticipants(memberId, TODO_ID))
                 .isInstanceOf(BusinessException.class)
@@ -233,7 +234,7 @@ class TodoParticipantServiceTest {
         UUID strangerId = UUID.randomUUID();
         when(todoRepo.findById(TODO_ID)).thenReturn(Optional.of(ownedTodo()));
         when(participantRepo.findByTodoIdAndMemberId(TODO_ID, strangerId)).thenReturn(Optional.empty());
-        TodoParticipantService service = new TodoParticipantService(participantRepo, todoRepo, mock(FriendRepository.class));
+        TodoParticipantService service = new TodoParticipantService(participantRepo, todoRepo, mock(FriendRepository.class), mock(ApplicationEventPublisher.class));
 
         assertThatThrownBy(() -> service.getParticipants(strangerId, TODO_ID))
                 .isInstanceOf(BusinessException.class)
@@ -249,7 +250,7 @@ class TodoParticipantServiceTest {
         TodoParticipantEntity participant = pendingParticipant(memberId, ParticipantRole.VIEWER);
         when(todoRepo.findByIdAndMemberId(TODO_ID, OWNER_ID)).thenReturn(Optional.of(ownedTodo()));
         when(participantRepo.findByTodoIdAndMemberId(TODO_ID, memberId)).thenReturn(Optional.of(participant));
-        TodoParticipantService service = new TodoParticipantService(participantRepo, todoRepo, mock(FriendRepository.class));
+        TodoParticipantService service = new TodoParticipantService(participantRepo, todoRepo, mock(FriendRepository.class), mock(ApplicationEventPublisher.class));
 
         TodoParticipant result = service.changeRole(OWNER_ID, TODO_ID, memberId, ParticipantRole.EDITOR);
 
@@ -262,7 +263,7 @@ class TodoParticipantServiceTest {
         TodoRepository todoRepo = mock(TodoRepository.class);
         UUID memberId = UUID.randomUUID();
 
-        TodoParticipantService service = new TodoParticipantService(participantRepo, todoRepo, mock(FriendRepository.class));
+        TodoParticipantService service = new TodoParticipantService(participantRepo, todoRepo, mock(FriendRepository.class), mock(ApplicationEventPublisher.class));
 
         assertThatThrownBy(() -> service.changeRole(OWNER_ID, TODO_ID, memberId, ParticipantRole.OWNER))
                 .isInstanceOf(BusinessException.class)
@@ -278,7 +279,7 @@ class TodoParticipantServiceTest {
         TodoParticipantEntity participant = pendingParticipant(memberId, ParticipantRole.VIEWER);
         when(todoRepo.findByIdAndMemberId(TODO_ID, OWNER_ID)).thenReturn(Optional.of(ownedTodo()));
         when(participantRepo.findByTodoIdAndMemberId(TODO_ID, memberId)).thenReturn(Optional.of(participant));
-        TodoParticipantService service = new TodoParticipantService(participantRepo, todoRepo, mock(FriendRepository.class));
+        TodoParticipantService service = new TodoParticipantService(participantRepo, todoRepo, mock(FriendRepository.class), mock(ApplicationEventPublisher.class));
 
         service.removeParticipant(OWNER_ID, TODO_ID, memberId);
 
@@ -292,7 +293,7 @@ class TodoParticipantServiceTest {
         TodoParticipantEntity participant = pendingParticipant(memberId, ParticipantRole.EDITOR);
         participant.accept();
         when(participantRepo.findByTodoIdAndMemberId(TODO_ID, memberId)).thenReturn(Optional.of(participant));
-        TodoParticipantService service = new TodoParticipantService(participantRepo, mock(TodoRepository.class), mock(FriendRepository.class));
+        TodoParticipantService service = new TodoParticipantService(participantRepo, mock(TodoRepository.class), mock(FriendRepository.class), mock(ApplicationEventPublisher.class));
 
         service.leave(memberId, TODO_ID);
 
@@ -304,7 +305,7 @@ class TodoParticipantServiceTest {
         TodoParticipantRepository participantRepo = mock(TodoParticipantRepository.class);
         UUID memberId = UUID.randomUUID();
         when(participantRepo.findByTodoIdAndMemberId(TODO_ID, memberId)).thenReturn(Optional.empty());
-        TodoParticipantService service = new TodoParticipantService(participantRepo, mock(TodoRepository.class), mock(FriendRepository.class));
+        TodoParticipantService service = new TodoParticipantService(participantRepo, mock(TodoRepository.class), mock(FriendRepository.class), mock(ApplicationEventPublisher.class));
 
         assertThatThrownBy(() -> service.leave(memberId, TODO_ID))
                 .isInstanceOf(BusinessException.class)
@@ -323,7 +324,7 @@ class TodoParticipantServiceTest {
         when(participantRepo.findByMemberIdAndInviteStatus(memberId, InviteStatus.ACCEPTED))
                 .thenReturn(List.of(accepted));
         when(todoRepo.findAllById(List.of(TODO_ID))).thenReturn(List.of(ownedTodo()));
-        TodoParticipantService service = new TodoParticipantService(participantRepo, todoRepo, mock(FriendRepository.class));
+        TodoParticipantService service = new TodoParticipantService(participantRepo, todoRepo, mock(FriendRepository.class), mock(ApplicationEventPublisher.class));
 
         List<Todo> result = service.getSharedTodos(memberId);
 

@@ -3,9 +3,12 @@ package com.haeyaji.be.friend.service;
 import com.haeyaji.be.common.exception.BusinessException;
 import com.haeyaji.be.common.exception.ErrorCode;
 import com.haeyaji.be.friend.domain.Friend;
+import com.haeyaji.be.friend.domain.FriendRequestedEvent;
+import com.haeyaji.be.friend.domain.FriendRespondedEvent;
 import com.haeyaji.be.friend.domain.FriendStatus;
 import com.haeyaji.be.friend.repository.FriendRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +23,7 @@ import java.util.UUID;
 public class FriendService {
 
     private final FriendRepository friendRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public Friend sendRequest(UUID requesterId, UUID receiverId) {
@@ -41,6 +45,9 @@ public class FriendService {
         if (reversePending.isPresent()) {
             Friend existing = reversePending.get();
             existing.accept();
+            // 서로 요청 = 성사. 먼저 보낸 쪽 입장에선 자기 요청이 수락된 것이므로 응답 알림을 보낸다.
+            eventPublisher.publishEvent(
+                    new FriendRespondedEvent(existing.getId(), requesterId, receiverId, true));
             return existing;
         }
 
@@ -52,18 +59,23 @@ public class FriendService {
         if (rejectedBefore.isPresent()) {
             Friend existing = rejectedBefore.get();
             existing.resend();
+            eventPublisher.publishEvent(
+                    new FriendRequestedEvent(existing.getId(), requesterId, receiverId));
             return existing;
         }
 
         // 5) 그 외엔 새로 생성
         Friend friend = Friend.create(requesterId, receiverId);
 
+        Friend saved;
         try {
-            return friendRepository.saveAndFlush(friend);   // saveAndFlush로 즉시 INSERT 실행
+            saved = friendRepository.saveAndFlush(friend);   // saveAndFlush로 즉시 INSERT 실행
         } catch (DataIntegrityViolationException e) {
             // 동시에 같은 요청이 두 번 들어온 경우 unique 위반: 500 에러 감싸기
             throw new BusinessException(ErrorCode.DUPLICATE_FRIEND_REQUEST);
         }
+        eventPublisher.publishEvent(new FriendRequestedEvent(saved.getId(), requesterId, receiverId));
+        return saved;
     }
 
     // 친구 요청 수락
@@ -82,6 +94,8 @@ public class FriendService {
         }
 
         friend.accept();
+        eventPublisher.publishEvent(
+                new FriendRespondedEvent(friend.getId(), memberId, friend.getRequesterId(), true));
 
         return friend;
     }
@@ -102,6 +116,8 @@ public class FriendService {
         }
 
         friend.reject();
+        eventPublisher.publishEvent(
+                new FriendRespondedEvent(friend.getId(), memberId, friend.getRequesterId(), false));
 
         return friend;
     }

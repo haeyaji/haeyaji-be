@@ -3,9 +3,12 @@ package com.haeyaji.be.friend.service;
 import com.haeyaji.be.common.exception.BusinessException;
 import com.haeyaji.be.common.exception.ErrorCode;
 import com.haeyaji.be.friend.domain.Friend;
+import com.haeyaji.be.friend.domain.FriendRequestedEvent;
+import com.haeyaji.be.friend.domain.FriendRespondedEvent;
 import com.haeyaji.be.friend.domain.FriendStatus;
 import com.haeyaji.be.friend.repository.FriendRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +23,7 @@ import java.util.UUID;
 public class FriendService {
 
     private final FriendRepository friendRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public Friend sendRequest(UUID requesterId, UUID receiverId) {
@@ -41,6 +45,10 @@ public class FriendService {
         if (reversePending.isPresent()) {
             Friend existing = reversePending.get();
             existing.accept();
+            // 이 분기에서 receiverId(이 메서드의 파라미터)는 "내가 요청 보내는 대상"이 아니라
+            // existing(상대가 예전에 보낸 pending 요청)의 원 요청자다 — 그래서 FriendRespondedEvent의
+            // requesterId 자리에 들어간다. 실제로 응답(수락) 행동을 한 사람은 이 메서드 호출자(requesterId)다.
+            eventPublisher.publishEvent(new FriendRespondedEvent(existing.getId(), requesterId, receiverId, true));
             return existing;
         }
 
@@ -52,6 +60,7 @@ public class FriendService {
         if (rejectedBefore.isPresent()) {
             Friend existing = rejectedBefore.get();
             existing.resend();
+            eventPublisher.publishEvent(new FriendRequestedEvent(existing.getId(), requesterId, receiverId));
             return existing;
         }
 
@@ -59,7 +68,9 @@ public class FriendService {
         Friend friend = Friend.create(requesterId, receiverId);
 
         try {
-            return friendRepository.saveAndFlush(friend);   // saveAndFlush로 즉시 INSERT 실행
+            Friend saved = friendRepository.saveAndFlush(friend);   // saveAndFlush로 즉시 INSERT 실행
+            eventPublisher.publishEvent(new FriendRequestedEvent(saved.getId(), requesterId, receiverId));
+            return saved;
         } catch (DataIntegrityViolationException e) {
             // 동시에 같은 요청이 두 번 들어온 경우 unique 위반: 500 에러 감싸기
             throw new BusinessException(ErrorCode.DUPLICATE_FRIEND_REQUEST);
@@ -82,6 +93,7 @@ public class FriendService {
         }
 
         friend.accept();
+        eventPublisher.publishEvent(new FriendRespondedEvent(friend.getId(), memberId, friend.getRequesterId(), true));
 
         return friend;
     }
@@ -102,6 +114,7 @@ public class FriendService {
         }
 
         friend.reject();
+        eventPublisher.publishEvent(new FriendRespondedEvent(friend.getId(), memberId, friend.getRequesterId(), false));
 
         return friend;
     }
